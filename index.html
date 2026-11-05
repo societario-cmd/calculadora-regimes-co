@@ -84,6 +84,21 @@
   details li { margin: 3px 0; }
   .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
   footer { max-width: 1280px; margin: 0 auto; padding: 0 20px 30px; color: var(--muted); font-size: 12px; }
+  .busca { display: flex; gap: 6px; }
+  .busca input { flex: 1; }
+  .enq { margin-top: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--text-2); }
+  .enq b { color: var(--text); }
+  .enq .t { font-weight: bold; color: var(--text); font-size: 13px; margin-bottom: 4px; }
+  .enq .erro { color: var(--warn); }
+  .enq ul { margin: 6px 0 0; padding-left: 16px; }
+  .enq li { margin: 2px 0; }
+  .enq .nota { margin-top: 6px; color: var(--warn); }
+  .tag { display: inline-block; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; font-size: 11px; margin-left: 4px; }
+  .faixa-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 1100px) { .faixa-box { grid-template-columns: repeat(2, 1fr); } }
+  .faixa-box div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .faixa-box small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .faixa-box b { font-size: 16px; }
   .ok-msg { color: var(--ok); font-size: 12px; align-self: center; }
 </style>
 </head>
@@ -98,6 +113,14 @@
   <form class="painel" id="form" autocomplete="off">
     <h2>Dados da empresa (valores por mês)</h2>
     <div class="grupo">
+      <h3>Consulta pelo CNPJ</h3>
+      <label for="cnpj">CNPJ</label>
+      <div class="busca"><input id="cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00"><button class="btn primario" type="button" id="buscar">Buscar</button></div>
+      <label for="cnae">ou CNAE principal</label>
+      <div class="busca"><input id="cnae" type="text" inputmode="numeric" placeholder="0000-0/00"><button class="btn" type="button" id="aplicar-cnae">Aplicar</button></div>
+      <div id="enq" class="enq" hidden></div>
+    </div>
+    <div class="grupo">
       <h3>Empresa</h3>
       <label for="cliente">Cliente (opcional)</label>
       <input id="cliente" type="text" placeholder="Razão social">
@@ -107,7 +130,9 @@
       <select id="reducao">
         <option value="0">Sem redução (alíquota padrão)</option>
         <option value="0.3">30% — profissões regulamentadas (LC 214, art. 127)</option>
+        <option value="0.5">50% — operações com imóveis e construção (LC 214, art. 261)</option>
         <option value="0.6">60% — saúde, educação e outros (LC 214, arts. 128 a 138)</option>
+        <option value="0.7">70% — locação de imóveis (LC 214, art. 261)</option>
       </select>
     </div>
     <div class="grupo">
@@ -155,6 +180,7 @@
   <section>
     <div class="anos" id="anos" role="group" aria-label="Ano da simulação"></div>
     <div class="cartoes" id="cartoes"></div>
+    <div class="faixa-box" id="faixa-box"></div>
     <div class="avisos" id="avisos"></div>
 
     <div class="secao painel">
@@ -238,7 +264,11 @@
       servicos3:  {nome: 'Serviços — Anexo III', anexo: 'III', local: 'ISS', pIR: .32, pCS: .32},
       servicos4:  {nome: 'Serviços — Anexo IV (limpeza, vigilância, obras, advocacia)', anexo: 'IV', local: 'ISS', pIR: .32, pCS: .32},
       servicos5:  {nome: 'Serviços — Anexo V (sujeito ao Fator R)', anexo: 'V', local: 'ISS', pIR: .32, pCS: .32, fatorR: true},
-      construcao: {nome: 'Construção com fornecimento de material', anexo: 'IV', local: 'ISS', pIR: .08, pCS: .12}
+      construcao: {nome: 'Construção com fornecimento de material', anexo: 'IV', local: 'ISS', pIR: .08, pCS: .12},
+      locacao:    {nome: 'Locação de imóveis próprios (vedada ao Simples)', anexo: null, local: '—', pIR: .32, pCS: .32, vedacao: 'Locação de imóveis próprios é vedada ao Simples (LC 123/2006, art. 17, XV).'},
+      holding:    {nome: 'Holding / participação em outras empresas (vedada ao Simples)', anexo: null, local: '—', pIR: .32, pCS: .32, vedacao: 'Sociedade que participa do capital de outra é vedada ao Simples (LC 123/2006, art. 3º, parágrafo 4º, VII).'},
+      incorporacao: {nome: 'Incorporação / loteamento (vedada ao Simples)', anexo: null, local: '—', pIR: .08, pCS: .12, vedacao: 'Incorporação e loteamento são vedados ao Simples (LC 123/2006, art. 17, XIV).'},
+      vedado:     {nome: 'Outra atividade vedada ao Simples', anexo: null, local: 'ISS', pIR: .32, pCS: .32, vedacao: 'Atividade vedada ao Simples Nacional (LC 123/2006, art. 17).'}
     },
     irpj: {aliq: .15, adicional: .10, limiteMes: 20000},
     csll: .09,
@@ -318,10 +348,10 @@
     out.fatorR = fatorR;
     out.anexo = anexo;
     const rbt12 = R * 12;
-    const fx = rbt12 <= PARAM.limiteSimples ? faixa(rbt12, anexo, ano) : null;
+    const fx = anexo && rbt12 <= PARAM.limiteSimples ? faixa(rbt12, anexo, ano) : null;
     out.faixa = fx;
     if (!fx) {
-      const motivo = 'Receita acima de R$ 4,8 milhões por ano (LC 123/2006, art. 3º, II).';
+      const motivo = !anexo ? at.vedacao : 'Receita acima de R$ 4,8 milhões por ano (LC 123/2006, art. 3º, II).';
       out.regimes.simples = {elegivel: false, motivo};
       out.regimes.hibrido = {elegivel: false, motivo};
     } else {
@@ -475,6 +505,177 @@
 
 </script>
 <script>
+/* Enquadramento por CNAE — Controller & Oraculu's
+ * Regras próprias, montadas a partir da LC 123/2006, art. 17 (vedações) e art. 18, parágrafos 5º-B a 5º-I e 5º-M (anexos),
+ * e da LC 214/2025, arts. 127 a 138 e 251 a 261 (reduções de CBS/IBS).
+ * A regra de prefixo mais longo vence. Resultado é SUGESTÃO: conferir o caso concreto.
+ * Sem DOM: roda no navegador e no Node. */
+(function (raiz) {
+  'use strict';
+
+  // [prefixo do CNAE (só dígitos), atividade da calculadora, nota]
+  // atividades: comercio, industria, servicos3, servicos4, servicos5 (Fator R), construcao, locacao, holding, incorporacao, vedado
+  const REGRAS = [
+    // Seções gerais
+    ['01', 'comercio', 'Produção rural: confira o enquadramento (produtor rural PJ, Anexo I/II conforme o caso).'],
+    ['02', 'comercio', 'Produção florestal: confira o enquadramento.'],
+    ['03', 'comercio', 'Pesca e aquicultura: confira o enquadramento.'],
+    ['05', 'industria'], ['06', 'vedado', 'Extração de petróleo e gás não pode optar pelo Simples.'], ['07', 'industria'], ['08', 'industria'], ['09', 'industria'],
+    ['1', 'industria'], ['2', 'industria'], ['30', 'industria'], ['31', 'industria'], ['32', 'industria'], ['33', 'industria'],
+    ['35', 'vedado', 'Geração, transmissão e distribuição de energia elétrica são vedadas ao Simples (LC 123, art. 17, VII).'],
+    ['36', 'servicos3'], ['37', 'servicos3'], ['38', 'servicos3'], ['39', 'servicos3'],
+    ['41', 'construcao', 'Construção de edifícios: Anexo IV. Se for só mão de obra, troque para Anexo IV (serviços).'],
+    ['4110700', 'incorporacao', 'Incorporação imobiliária é vedada ao Simples (LC 123, art. 17, XIV). Avalie RET com patrimônio de afetação.'],
+    ['42', 'construcao', 'Obras de infraestrutura: Anexo IV.'],
+    ['43', 'servicos4', 'Serviços especializados de construção: Anexo IV. Com fornecimento de material, troque para "Construção com material".'],
+    ['45', 'comercio'], ['46', 'comercio'], ['47', 'comercio'],
+    ['461', 'servicos5', 'Representação comercial / intermediação: Anexo V, ou III com Fator R ≥ 28% (LC 123, art. 18, parágrafo 5º-I, IV).'],
+    ['49', 'servicos3', 'Transporte: intermunicipal e interestadual de cargas tem ICMS (Anexo III sem ISS). Confira.'],
+    ['50', 'servicos3', 'Transporte aquaviário: confira.'], ['51', 'servicos3', 'Transporte aéreo: confira.'],
+    ['52', 'servicos3'], ['5250803', 'servicos5', 'Despachante aduaneiro / comissária: Anexo V ou III com Fator R.'],
+    ['53', 'servicos3'],
+    ['55', 'servicos3'], ['56', 'comercio', 'Restaurantes e bares: Anexo I (fornecimento de alimentação, ICMS).'],
+    ['58', 'servicos3'], ['59', 'servicos3'], ['60', 'servicos3'],
+    ['61', 'servicos3', 'Telecomunicações: tributação específica (ICMS). Confira.'],
+    ['62', 'servicos5', 'Tecnologia da informação: Anexo V, ou III com Fator R ≥ 28%.'],
+    ['6203100', 'servicos3', 'Licenciamento de software não customizável: Anexo III.'],
+    ['63', 'servicos3'], ['6391700', 'servicos5', 'Agência de notícias (jornalismo): Anexo V ou III com Fator R.'],
+    ['64', 'vedado', 'Atividade financeira vedada ao Simples (LC 123, art. 17, I).'],
+    ['65', 'vedado', 'Seguros e previdência: vedados ao Simples.'],
+    ['66', 'servicos3', 'Auxiliares financeiros: confira se não há vedação.'],
+    ['6462', 'holding', 'Holding de instituições não financeiras: vedada ao Simples (LC 123, art. 3º, parágrafo 4º, VII).'],
+    ['6463', 'holding', 'Outras sociedades de participação: vedadas ao Simples.'],
+    ['6810201', 'servicos3', 'Compra e venda de imóveis próprios: operações com imóveis têm redução de 50% de CBS/IBS (LC 214, art. 261). Confira a presunção de 8% no Presumido.'],
+    ['6810202', 'locacao', 'Locação de imóveis próprios: vedada ao Simples (LC 123, art. 17, XV). Redução de 70% de CBS/IBS (LC 214, art. 261).'],
+    ['6810203', 'incorporacao', 'Loteamento de imóveis próprios: vedado ao Simples (LC 123, art. 17, XIV).'],
+    ['682', 'servicos3', 'Intermediação e administração de imóveis: redução de 50% de CBS/IBS (LC 214, art. 261).'],
+    ['69117', 'servicos4', 'Advocacia: Anexo IV (LC 123, art. 18, parágrafo 5º-C, VII).'],
+    ['6912', 'vedado', 'Cartórios: não optam pelo Simples.'],
+    ['6920601', 'servicos3', 'Contabilidade: Anexo III (LC 123, art. 18, parágrafo 5º-B, XIV).'],
+    ['6920602', 'servicos5', 'Consultoria e auditoria contábil e tributária: Anexo V ou III com Fator R.'],
+    ['70', 'servicos5', 'Consultoria e gestão: Anexo V ou III com Fator R (LC 123, art. 18, parágrafo 5º-I, VI).'],
+    ['71', 'servicos5', 'Engenharia, arquitetura e análises técnicas: Anexo V ou III com Fator R.'],
+    ['72', 'servicos5', 'Pesquisa e desenvolvimento: Anexo V ou III com Fator R.'],
+    ['73', 'servicos5', 'Publicidade: Anexo V ou III com Fator R.'],
+    ['7320', 'servicos3', 'Pesquisa de mercado: confira (Anexo III).'],
+    ['74', 'servicos5', 'Design e atividades técnicas: Anexo V ou III com Fator R.'],
+    ['7410202', 'servicos4', 'Design de interiores (decoração): Anexo IV (LC 123, art. 18, parágrafo 5º-C, I).'],
+    ['7420', 'servicos3', 'Fotografia: Anexo III.'],
+    ['75', 'servicos5', 'Medicina veterinária: Anexo V ou III com Fator R.'],
+    ['77', 'servicos3', 'Locação de bens móveis: confira (locação sem operador não tem ISS).'],
+    ['781', 'servicos5', 'Seleção e agenciamento de mão de obra: Anexo V ou III com Fator R.'],
+    ['782', 'vedado', 'Locação/fornecimento de mão de obra (cessão): vedada ao Simples (LC 123, art. 17, XII), salvo exceções do Anexo IV.'],
+    ['783', 'vedado', 'Fornecimento de recursos humanos (cessão de mão de obra): vedado ao Simples, salvo exceções.'],
+    ['79', 'servicos3'],
+    ['801', 'servicos4', 'Vigilância e segurança privada: Anexo IV (LC 123, art. 18, parágrafo 5º-C, VI).'],
+    ['802', 'servicos3'], ['803', 'servicos3'],
+    ['811', 'servicos4', 'Apoio a edifícios / conservação: Anexo IV.'],
+    ['812', 'servicos4', 'Limpeza e conservação: Anexo IV.'], ['8122200', 'servicos3', 'Imunização e controle de pragas: Anexo III.'],
+    ['813', 'servicos4', 'Paisagismo: Anexo IV.'],
+    ['82', 'servicos3'],
+    ['84', 'vedado', 'Administração pública.'],
+    ['85', 'servicos3', 'Educação: Anexo III. Redução de 60% de CBS/IBS para os serviços de educação listados na LC 214 (art. 129).'],
+    ['86', 'servicos5', 'Saúde: Anexo V ou III com Fator R. Redução de 60% de CBS/IBS (LC 214, art. 130).'],
+    ['8650004', 'servicos3', 'Fisioterapia: Anexo III (LC 123, art. 18, parágrafo 5º-B, XVI). Redução de 60% de CBS/IBS.'],
+    ['87', 'servicos3'], ['88', 'servicos3'],
+    ['90', 'servicos5', 'Atividades artísticas: Anexo V ou III com Fator R.'], ['91', 'servicos3'], ['92', 'vedado', 'Jogos e apostas.'],
+    ['93', 'servicos3'], ['94', 'servicos3'], ['95', 'servicos3'], ['96', 'servicos3'], ['97', 'servicos3']
+  ];
+
+  // Redução de CBS/IBS sugerida: [prefixo, redução, nota]
+  const REDUCOES = [
+    ['41', .5, 'construção'], ['42', .5, 'construção'], ['43', .5, 'construção'],
+    ['6810201', .5, 'venda de imóveis'], ['6810202', .7, 'locação de imóveis'], ['682', .5, 'intermediação/administração de imóveis'], ['4110700', .5, 'incorporação'],
+    ['85', .6, 'educação'], ['86', .6, 'saúde'], ['8650004', .6, 'saúde'],
+    ['69117', .3, 'advocacia (profissão regulamentada)'], ['692', .3, 'contabilidade (profissão regulamentada)'],
+    ['711', .3, 'engenharia e arquitetura (profissão regulamentada)'], ['75', .3, 'medicina veterinária (profissão regulamentada)'],
+    ['7020', .3, 'administração/economia, se exercida por profissional habilitado'], ['9313', .3, 'educação física (profissão regulamentada)']
+  ];
+
+  const so = c => String(c || '').replace(/\D/g, '');
+
+  function busca(lista, cnae) {
+    const c = so(cnae);
+    let melhor = null;
+    lista.forEach(r => { if (c.startsWith(r[0]) && (!melhor || r[0].length > melhor[0].length)) melhor = r; });
+    return melhor;
+  }
+
+  function enquadrar(cnae) {
+    const c = so(cnae);
+    if (c.length < 4) return null;
+    const r = busca(REGRAS, c);
+    const red = busca(REDUCOES, c);
+    return {
+      cnae: c,
+      formatado: c.length === 7 ? c.slice(0, 4) + '-' + c[4] + '/' + c.slice(5) : c,
+      atividade: r ? r[1] : 'servicos3',
+      nota: r ? (r[2] || '') : 'CNAE não mapeado: tratado como serviço do Anexo III. Confira.',
+      reducao: red ? red[1] : 0,
+      motivoReducao: red ? red[2] : ''
+    };
+  }
+
+  function validarCnpj(v) {
+    const c = so(v);
+    if (c.length !== 14 || /^(\d)\1+$/.test(c)) return false;
+    const dv = n => { let s = 0, p = n - 7; for (let i = 0; i < n; i++) { s += +c[i] * p--; if (p < 2) p = 9; } const r = s % 11; return r < 2 ? 0 : 11 - r; };
+    return dv(12) === +c[12] && dv(13) === +c[13];
+  }
+
+  // Normaliza a resposta da BrasilAPI ou da publica.cnpj.ws
+  function normalizar(j) {
+    if (j && j.cnae_fiscal) {
+      const reg = (j.regime_tributario || []).slice().sort((a, b) => b.ano - a.ano)[0];
+      return {
+        razao: j.razao_social, fantasia: j.nome_fantasia, situacao: j.descricao_situacao_cadastral,
+        municipio: j.municipio, uf: j.uf, abertura: j.data_inicio_atividade,
+        principal: {codigo: String(j.cnae_fiscal), descricao: j.cnae_fiscal_descricao},
+        secundarios: (j.cnaes_secundarios || []).filter(s => s.codigo).map(s => ({codigo: String(s.codigo), descricao: s.descricao})),
+        simples: j.opcao_pelo_simples === true, mei: j.opcao_pelo_mei === true,
+        regime: reg ? reg.forma_de_tributacao + ' (' + reg.ano + ')' : null,
+        natureza: j.natureza_juridica || null
+      };
+    }
+    if (j && j.estabelecimento) {
+      const e = j.estabelecimento;
+      return {
+        razao: j.razao_social, fantasia: e.nome_fantasia, situacao: e.situacao_cadastral,
+        municipio: e.cidade && e.cidade.nome, uf: e.estado && e.estado.sigla, abertura: e.data_inicio_atividade,
+        principal: {codigo: e.atividade_principal && e.atividade_principal.id, descricao: e.atividade_principal && e.atividade_principal.descricao},
+        secundarios: (e.atividades_secundarias || []).map(s => ({codigo: s.id, descricao: s.descricao})),
+        simples: !!(j.simples && j.simples.simples === 'Sim'), mei: !!(j.simples && j.simples.mei === 'Sim'),
+        regime: null, natureza: j.natureza_juridica && j.natureza_juridica.descricao
+      };
+    }
+    return null;
+  }
+
+  async function consultar(cnpj) {
+    const c = so(cnpj);
+    const fontes = ['https://brasilapi.com.br/api/cnpj/v1/' + c, 'https://publica.cnpj.ws/cnpj/' + c];
+    let ultimo = null;
+    for (const url of fontes) {
+      try {
+        const r = await fetch(url, {headers: {Accept: 'application/json'}});
+        if (r.status === 404) throw new Error('CNPJ não encontrado na base da Receita.');
+        if (!r.ok) { ultimo = new Error('Consulta indisponível (HTTP ' + r.status + ').'); continue; }
+        const d = normalizar(await r.json());
+        if (d) return d;
+      } catch (e) {
+        if (/não encontrado/.test(e.message)) throw e;
+        ultimo = e;
+      }
+    }
+    throw new Error('Não foi possível consultar o CNPJ agora. Digite o CNAE principal no campo ao lado.' + (ultimo && /Failed to fetch|NetworkError|Load failed/i.test(ultimo.message) ? ' (Este ambiente bloqueia consultas externas.)' : ''));
+  }
+
+  const api = {enquadrar, validarCnpj, normalizar, consultar, REGRAS, REDUCOES};
+  if (typeof module === 'object' && module.exports) module.exports = api; else raiz.CNAE = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
 (function () {
   'use strict';
   const M = window.Motor;
@@ -488,7 +689,7 @@
   const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
   const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   const cor = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const PADRAO = {cliente: '', atividade: 'servicos5', reducao: '0', receita: 60000, margem: 40, compras: 0, icms: 18, iss: 5, folha: 20000, rat: 0, socios: 2, dist: 100, retemSimples: true, cbsRef: 11.3, ibsRef: 18.7};
+  const PADRAO = {cnpj: '', cnae: '', cliente: '', atividade: 'servicos5', reducao: '0', receita: 60000, margem: 40, compras: 0, icms: 18, iss: 5, folha: 20000, rat: 0, socios: 2, dist: 100, retemSimples: true, cbsRef: 11.3, ibsRef: 18.7};
   let ano = 2027;
 
   // Atividades
@@ -562,6 +763,14 @@
         '<div class="valor">' + brl(r.total * 12) + '</div><div class="sub">' + pct(r.efetiva) + ' do faturamento · ' + brl(r.total) + '/mês</div>' + dif + '</div>';
     }).join('');
 
+    const at = M.PARAM.atividades[e.atividade];
+    if (res.faixa) {
+      const fx = res.faixa;
+      const anexoTxt = fx.nomeAnexo + (res.fatorR !== null ? (res.anexo === 'III' ? ' (Fator R ' + pct(res.fatorR) + ')' : ' (Fator R ' + pct(res.fatorR) + ' < 28%)') : '');
+      $('faixa-box').innerHTML = '<div><small>Enquadramento no Simples</small><b>' + anexoTxt + '</b></div><div><small>Faixa</small><b>' + fx.numero + 'ª faixa</b></div><div><small>Alíquota nominal</small><b>' + (fx.nominal * 100).toLocaleString('pt-BR', {maximumFractionDigits: 2}) + '%</b></div><div><small>Alíquota efetiva</small><b>' + (fx.efetiva * 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%</b></div>';
+    } else {
+      $('faixa-box').innerHTML = '<div style="grid-column:1/-1"><small>Enquadramento no Simples</small><b>' + (at.vedacao ? 'Vedado' : 'Fora do limite') + '</b> — ' + res.regimes.simples.motivo + '</div>';
+    }
     $('avisos').innerHTML = res.avisos.map(a => '<div class="aviso">' + a + '</div>').join('');
 
     // Tabela
@@ -668,7 +877,7 @@
     const e = lerForm(); const res = proj.find(p => p.ano === ano);
     const at = M.PARAM.atividades[e.atividade];
     let t = 'ESTUDO DE REGIME TRIBUTÁRIO — ' + ($('cliente').value || 'cliente') + '\nController & Oraculu\'s — simulação ' + ano + '\n\n';
-    t += 'Atividade: ' + at.nome + (res.fatorR !== null ? ' (Fator R ' + pct(res.fatorR) + ')' : '') + '\nFaturamento mensal: ' + brl(e.receita) + ' | Folha: ' + brl(e.folha) + ' | Margem: ' + pct(e.margem) + '\n';
+    t += ($('cnpj').value ? 'CNPJ: ' + $('cnpj').value + '\n' : '') + ($('cnae').value ? 'CNAE principal: ' + $('cnae').value + '\n' : '') + 'Atividade: ' + at.nome + (res.fatorR !== null ? ' (Fator R ' + pct(res.fatorR) + ')' : '') + '\nFaturamento mensal: ' + brl(e.receita) + ' | Folha: ' + brl(e.folha) + ' | Margem: ' + pct(e.margem) + '\n';
     t += 'CBS de referência: ' + pct(e.cbsRef) + ' | IBS de referência: ' + pct(e.ibsRef) + '\n\nCarga anual por regime:\n';
     REG.forEach(g => { const r = res.regimes[g.k]; t += '- ' + g.nome + ': ' + (r && r.elegivel ? brl(r.total * 12) + ' (' + pct(r.efetiva) + ')' : 'não se aplica') + '\n'; });
     t += '\nProjeção anual 2026–2033:\n';
@@ -682,6 +891,55 @@
     const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove();
   }
+
+  // Consulta por CNPJ / CNAE
+  const C = window.CNAE;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  function rotuloAnexo(atv) {
+    const a = M.PARAM.atividades[atv];
+    if (!a.anexo) return 'vedado ao Simples';
+    return a.anexo === 'V' ? 'Anexo V / III c/ Fator R' : 'Anexo ' + a.anexo;
+  }
+  function aplicarCnae(codigo, dados) {
+    const q = C.enquadrar(codigo);
+    if (!q) { mostrarEnq('<span class="erro">CNAE inválido: informe os 7 dígitos.</span>'); return; }
+    $('cnae').value = q.formatado;
+    $('atividade').value = q.atividade;
+    $('reducao').value = String(q.reducao);
+    if (dados && dados.razao) $('cliente').value = dados.razao;
+    let h = '';
+    if (dados) {
+      h += '<div class="t">' + esc(dados.razao) + '</div>';
+      h += '<div>' + esc(dados.situacao || '') + (dados.municipio ? ' · ' + esc(dados.municipio) + '/' + esc(dados.uf) : '') + (dados.abertura ? ' · aberta em ' + esc(dados.abertura.split('-').reverse().join('/')) : '') + '</div>';
+      h += '<div>Regime atual: <b>' + (dados.mei ? 'MEI' : dados.simples ? 'Simples Nacional' : (dados.regime ? esc(dados.regime) : 'não optante do Simples')) + '</b></div>';
+    }
+    h += '<div style="margin-top:6px">CNAE principal: <b>' + esc(q.formatado) + '</b>' + (dados && dados.principal.descricao ? ' — ' + esc(dados.principal.descricao) : '') + '</div>';
+    h += '<div>Enquadramento sugerido: <b>' + esc(M.PARAM.atividades[q.atividade].nome) + '</b><span class="tag">' + rotuloAnexo(q.atividade) + '</span></div>';
+    if (q.reducao) h += '<div>Redução de CBS/IBS sugerida: <b>' + Math.round(q.reducao * 100) + '%</b> (' + esc(q.motivoReducao) + ')</div>';
+    if (q.nota) h += '<div class="nota">' + esc(q.nota) + '</div>';
+    if (dados && dados.secundarios.length) {
+      h += '<div style="margin-top:6px">Atividades secundárias:</div><ul>' + dados.secundarios.map(s => { const z = C.enquadrar(s.codigo); return '<li>' + esc(z ? z.formatado : s.codigo) + ' — ' + esc(s.descricao) + '<span class="tag">' + (z ? rotuloAnexo(z.atividade) : '?') + '</span></li>'; }).join('') + '</ul>';
+      const anexos = new Set([q.atividade].concat(dados.secundarios.map(s => (C.enquadrar(s.codigo) || {}).atividade)).filter(Boolean).map(rotuloAnexo));
+      if (anexos.size > 1) h += '<div class="nota">Há atividades em anexos diferentes: no Simples, cada receita é tributada no seu anexo. A simulação usa só o CNAE principal.</div>';
+    }
+    mostrarEnq(h);
+    render();
+  }
+  function mostrarEnq(h) { const b = $('enq'); b.innerHTML = h; b.hidden = false; }
+  $('buscar').addEventListener('click', async () => {
+    const v = $('cnpj').value;
+    if (!C.validarCnpj(v)) { mostrarEnq('<span class="erro">CNPJ inválido. Confira os 14 dígitos.</span>'); return; }
+    const d = v.replace(/\D/g, '');
+    $('cnpj').value = d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    mostrarEnq('Consultando a base da Receita…');
+    $('buscar').disabled = true;
+    try { const dados = await C.consultar(d); aplicarCnae(dados.principal.codigo, dados); }
+    catch (err) { mostrarEnq('<span class="erro">' + esc(err.message) + '</span>'); }
+    finally { $('buscar').disabled = false; }
+  });
+  $('cnpj').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); $('buscar').click(); } });
+  $('aplicar-cnae').addEventListener('click', () => aplicarCnae($('cnae').value, null));
+  $('cnae').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); aplicarCnae($('cnae').value, null); } });
 
   $('limpar').addEventListener('click', () => { aplicar(PADRAO); render(); });
   $('form').addEventListener('input', render);

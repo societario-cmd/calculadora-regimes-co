@@ -29,7 +29,11 @@
       servicos3:  {nome: 'Serviços — Anexo III', anexo: 'III', local: 'ISS', pIR: .32, pCS: .32},
       servicos4:  {nome: 'Serviços — Anexo IV (limpeza, vigilância, obras, advocacia)', anexo: 'IV', local: 'ISS', pIR: .32, pCS: .32},
       servicos5:  {nome: 'Serviços — Anexo V (sujeito ao Fator R)', anexo: 'V', local: 'ISS', pIR: .32, pCS: .32, fatorR: true},
-      construcao: {nome: 'Construção com fornecimento de material', anexo: 'IV', local: 'ISS', pIR: .08, pCS: .12}
+      construcao: {nome: 'Construção com fornecimento de material', anexo: 'IV', local: 'ISS', pIR: .08, pCS: .12},
+      locacao:    {nome: 'Locação de imóveis próprios (vedada ao Simples)', anexo: null, local: '—', pIR: .32, pCS: .32, vedacao: 'Locação de imóveis próprios é vedada ao Simples (LC 123/2006, art. 17, XV).'},
+      holding:    {nome: 'Holding / participação em outras empresas (vedada ao Simples)', anexo: null, local: '—', pIR: .32, pCS: .32, vedacao: 'Sociedade que participa do capital de outra é vedada ao Simples (LC 123/2006, art. 3º, parágrafo 4º, VII).'},
+      incorporacao: {nome: 'Incorporação / loteamento (vedada ao Simples)', anexo: null, local: '—', pIR: .08, pCS: .12, vedacao: 'Incorporação e loteamento são vedados ao Simples (LC 123/2006, art. 17, XIV).'},
+      vedado:     {nome: 'Outra atividade vedada ao Simples', anexo: null, local: 'ISS', pIR: .32, pCS: .32, vedacao: 'Atividade vedada ao Simples Nacional (LC 123/2006, art. 17).'}
     },
     irpj: {aliq: .15, adicional: .10, limiteMes: 20000},
     csll: .09,
@@ -109,10 +113,10 @@
     out.fatorR = fatorR;
     out.anexo = anexo;
     const rbt12 = R * 12;
-    const fx = rbt12 <= PARAM.limiteSimples ? faixa(rbt12, anexo, ano) : null;
+    const fx = anexo && rbt12 <= PARAM.limiteSimples ? faixa(rbt12, anexo, ano) : null;
     out.faixa = fx;
     if (!fx) {
-      const motivo = 'Receita acima de R$ 4,8 milhões por ano (LC 123/2006, art. 3º, II).';
+      const motivo = !anexo ? at.vedacao : 'Receita acima de R$ 4,8 milhões por ano (LC 123/2006, art. 3º, II).';
       out.regimes.simples = {elegivel: false, motivo};
       out.regimes.hibrido = {elegivel: false, motivo};
     } else {

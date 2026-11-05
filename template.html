@@ -84,6 +84,21 @@
   details li { margin: 3px 0; }
   .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
   footer { max-width: 1280px; margin: 0 auto; padding: 0 20px 30px; color: var(--muted); font-size: 12px; }
+  .busca { display: flex; gap: 6px; }
+  .busca input { flex: 1; }
+  .enq { margin-top: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--text-2); }
+  .enq b { color: var(--text); }
+  .enq .t { font-weight: bold; color: var(--text); font-size: 13px; margin-bottom: 4px; }
+  .enq .erro { color: var(--warn); }
+  .enq ul { margin: 6px 0 0; padding-left: 16px; }
+  .enq li { margin: 2px 0; }
+  .enq .nota { margin-top: 6px; color: var(--warn); }
+  .tag { display: inline-block; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; font-size: 11px; margin-left: 4px; }
+  .faixa-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 1100px) { .faixa-box { grid-template-columns: repeat(2, 1fr); } }
+  .faixa-box div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .faixa-box small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .faixa-box b { font-size: 16px; }
   .ok-msg { color: var(--ok); font-size: 12px; align-self: center; }
 </style>
 </head>
@@ -98,6 +113,14 @@
   <form class="painel" id="form" autocomplete="off">
     <h2>Dados da empresa (valores por mês)</h2>
     <div class="grupo">
+      <h3>Consulta pelo CNPJ</h3>
+      <label for="cnpj">CNPJ</label>
+      <div class="busca"><input id="cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00"><button class="btn primario" type="button" id="buscar">Buscar</button></div>
+      <label for="cnae">ou CNAE principal</label>
+      <div class="busca"><input id="cnae" type="text" inputmode="numeric" placeholder="0000-0/00"><button class="btn" type="button" id="aplicar-cnae">Aplicar</button></div>
+      <div id="enq" class="enq" hidden></div>
+    </div>
+    <div class="grupo">
       <h3>Empresa</h3>
       <label for="cliente">Cliente (opcional)</label>
       <input id="cliente" type="text" placeholder="Razão social">
@@ -107,7 +130,9 @@
       <select id="reducao">
         <option value="0">Sem redução (alíquota padrão)</option>
         <option value="0.3">30% — profissões regulamentadas (LC 214, art. 127)</option>
+        <option value="0.5">50% — operações com imóveis e construção (LC 214, art. 261)</option>
         <option value="0.6">60% — saúde, educação e outros (LC 214, arts. 128 a 138)</option>
+        <option value="0.7">70% — locação de imóveis (LC 214, art. 261)</option>
       </select>
     </div>
     <div class="grupo">
@@ -155,6 +180,7 @@
   <section>
     <div class="anos" id="anos" role="group" aria-label="Ano da simulação"></div>
     <div class="cartoes" id="cartoes"></div>
+    <div class="faixa-box" id="faixa-box"></div>
     <div class="avisos" id="avisos"></div>
 
     <div class="secao painel">
@@ -210,6 +236,9 @@
 /*MOTOR*/
 </script>
 <script>
+/*CNAE*/
+</script>
+<script>
 (function () {
   'use strict';
   const M = window.Motor;
@@ -223,7 +252,7 @@
   const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
   const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
   const cor = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const PADRAO = {cliente: '', atividade: 'servicos5', reducao: '0', receita: 60000, margem: 40, compras: 0, icms: 18, iss: 5, folha: 20000, rat: 0, socios: 2, dist: 100, retemSimples: true, cbsRef: 11.3, ibsRef: 18.7};
+  const PADRAO = {cnpj: '', cnae: '', cliente: '', atividade: 'servicos5', reducao: '0', receita: 60000, margem: 40, compras: 0, icms: 18, iss: 5, folha: 20000, rat: 0, socios: 2, dist: 100, retemSimples: true, cbsRef: 11.3, ibsRef: 18.7};
   let ano = 2027;
 
   // Atividades
@@ -297,6 +326,14 @@
         '<div class="valor">' + brl(r.total * 12) + '</div><div class="sub">' + pct(r.efetiva) + ' do faturamento · ' + brl(r.total) + '/mês</div>' + dif + '</div>';
     }).join('');
 
+    const at = M.PARAM.atividades[e.atividade];
+    if (res.faixa) {
+      const fx = res.faixa;
+      const anexoTxt = fx.nomeAnexo + (res.fatorR !== null ? (res.anexo === 'III' ? ' (Fator R ' + pct(res.fatorR) + ')' : ' (Fator R ' + pct(res.fatorR) + ' < 28%)') : '');
+      $('faixa-box').innerHTML = '<div><small>Enquadramento no Simples</small><b>' + anexoTxt + '</b></div><div><small>Faixa</small><b>' + fx.numero + 'ª faixa</b></div><div><small>Alíquota nominal</small><b>' + (fx.nominal * 100).toLocaleString('pt-BR', {maximumFractionDigits: 2}) + '%</b></div><div><small>Alíquota efetiva</small><b>' + (fx.efetiva * 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%</b></div>';
+    } else {
+      $('faixa-box').innerHTML = '<div style="grid-column:1/-1"><small>Enquadramento no Simples</small><b>' + (at.vedacao ? 'Vedado' : 'Fora do limite') + '</b> — ' + res.regimes.simples.motivo + '</div>';
+    }
     $('avisos').innerHTML = res.avisos.map(a => '<div class="aviso">' + a + '</div>').join('');
 
     // Tabela
@@ -403,7 +440,7 @@
     const e = lerForm(); const res = proj.find(p => p.ano === ano);
     const at = M.PARAM.atividades[e.atividade];
     let t = 'ESTUDO DE REGIME TRIBUTÁRIO — ' + ($('cliente').value || 'cliente') + '\nController & Oraculu\'s — simulação ' + ano + '\n\n';
-    t += 'Atividade: ' + at.nome + (res.fatorR !== null ? ' (Fator R ' + pct(res.fatorR) + ')' : '') + '\nFaturamento mensal: ' + brl(e.receita) + ' | Folha: ' + brl(e.folha) + ' | Margem: ' + pct(e.margem) + '\n';
+    t += ($('cnpj').value ? 'CNPJ: ' + $('cnpj').value + '\n' : '') + ($('cnae').value ? 'CNAE principal: ' + $('cnae').value + '\n' : '') + 'Atividade: ' + at.nome + (res.fatorR !== null ? ' (Fator R ' + pct(res.fatorR) + ')' : '') + '\nFaturamento mensal: ' + brl(e.receita) + ' | Folha: ' + brl(e.folha) + ' | Margem: ' + pct(e.margem) + '\n';
     t += 'CBS de referência: ' + pct(e.cbsRef) + ' | IBS de referência: ' + pct(e.ibsRef) + '\n\nCarga anual por regime:\n';
     REG.forEach(g => { const r = res.regimes[g.k]; t += '- ' + g.nome + ': ' + (r && r.elegivel ? brl(r.total * 12) + ' (' + pct(r.efetiva) + ')' : 'não se aplica') + '\n'; });
     t += '\nProjeção anual 2026–2033:\n';
@@ -417,6 +454,55 @@
     const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove();
   }
+
+  // Consulta por CNPJ / CNAE
+  const C = window.CNAE;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  function rotuloAnexo(atv) {
+    const a = M.PARAM.atividades[atv];
+    if (!a.anexo) return 'vedado ao Simples';
+    return a.anexo === 'V' ? 'Anexo V / III c/ Fator R' : 'Anexo ' + a.anexo;
+  }
+  function aplicarCnae(codigo, dados) {
+    const q = C.enquadrar(codigo);
+    if (!q) { mostrarEnq('<span class="erro">CNAE inválido: informe os 7 dígitos.</span>'); return; }
+    $('cnae').value = q.formatado;
+    $('atividade').value = q.atividade;
+    $('reducao').value = String(q.reducao);
+    if (dados && dados.razao) $('cliente').value = dados.razao;
+    let h = '';
+    if (dados) {
+      h += '<div class="t">' + esc(dados.razao) + '</div>';
+      h += '<div>' + esc(dados.situacao || '') + (dados.municipio ? ' · ' + esc(dados.municipio) + '/' + esc(dados.uf) : '') + (dados.abertura ? ' · aberta em ' + esc(dados.abertura.split('-').reverse().join('/')) : '') + '</div>';
+      h += '<div>Regime atual: <b>' + (dados.mei ? 'MEI' : dados.simples ? 'Simples Nacional' : (dados.regime ? esc(dados.regime) : 'não optante do Simples')) + '</b></div>';
+    }
+    h += '<div style="margin-top:6px">CNAE principal: <b>' + esc(q.formatado) + '</b>' + (dados && dados.principal.descricao ? ' — ' + esc(dados.principal.descricao) : '') + '</div>';
+    h += '<div>Enquadramento sugerido: <b>' + esc(M.PARAM.atividades[q.atividade].nome) + '</b><span class="tag">' + rotuloAnexo(q.atividade) + '</span></div>';
+    if (q.reducao) h += '<div>Redução de CBS/IBS sugerida: <b>' + Math.round(q.reducao * 100) + '%</b> (' + esc(q.motivoReducao) + ')</div>';
+    if (q.nota) h += '<div class="nota">' + esc(q.nota) + '</div>';
+    if (dados && dados.secundarios.length) {
+      h += '<div style="margin-top:6px">Atividades secundárias:</div><ul>' + dados.secundarios.map(s => { const z = C.enquadrar(s.codigo); return '<li>' + esc(z ? z.formatado : s.codigo) + ' — ' + esc(s.descricao) + '<span class="tag">' + (z ? rotuloAnexo(z.atividade) : '?') + '</span></li>'; }).join('') + '</ul>';
+      const anexos = new Set([q.atividade].concat(dados.secundarios.map(s => (C.enquadrar(s.codigo) || {}).atividade)).filter(Boolean).map(rotuloAnexo));
+      if (anexos.size > 1) h += '<div class="nota">Há atividades em anexos diferentes: no Simples, cada receita é tributada no seu anexo. A simulação usa só o CNAE principal.</div>';
+    }
+    mostrarEnq(h);
+    render();
+  }
+  function mostrarEnq(h) { const b = $('enq'); b.innerHTML = h; b.hidden = false; }
+  $('buscar').addEventListener('click', async () => {
+    const v = $('cnpj').value;
+    if (!C.validarCnpj(v)) { mostrarEnq('<span class="erro">CNPJ inválido. Confira os 14 dígitos.</span>'); return; }
+    const d = v.replace(/\D/g, '');
+    $('cnpj').value = d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    mostrarEnq('Consultando a base da Receita…');
+    $('buscar').disabled = true;
+    try { const dados = await C.consultar(d); aplicarCnae(dados.principal.codigo, dados); }
+    catch (err) { mostrarEnq('<span class="erro">' + esc(err.message) + '</span>'); }
+    finally { $('buscar').disabled = false; }
+  });
+  $('cnpj').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); $('buscar').click(); } });
+  $('aplicar-cnae').addEventListener('click', () => aplicarCnae($('cnae').value, null));
+  $('cnae').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); aplicarCnae($('cnae').value, null); } });
 
   $('limpar').addEventListener('click', () => { aplicar(PADRAO); render(); });
   $('form').addEventListener('input', render);

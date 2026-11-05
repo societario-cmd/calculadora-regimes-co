@@ -9,6 +9,12 @@ Ferramenta do Departamento Societário e de Legalização da Controller & Oracul
 
 Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o crédito de CBS/IBS que cada regime gera para o cliente do contribuinte.
 
+## Consulta por CNPJ
+
+Informe o CNPJ e clique em Buscar: a página consulta a base pública da Receita Federal (BrasilAPI, com a publica.cnpj.ws como reserva), traz razão social, situação, regime atual, CNAE principal e secundários, e já preenche a atividade, o anexo do Simples, o Fator R e a redução de CBS/IBS sugerida. Sem internet, ou num ambiente que bloqueie a consulta, basta digitar o CNAE principal.
+
+O enquadramento por CNAE (`cnae.js`) é uma tabela própria montada a partir da LC 123/2006 (art. 17 e art. 18, parágrafos 5º-B a 5º-I) e da LC 214/2025 (reduções). É uma sugestão: confira o caso concreto, principalmente atividades mistas.
+
 Roda inteira no navegador: um único `index.html`, sem servidor e sem dependências.
 
 ## Estrutura
@@ -17,14 +23,15 @@ Roda inteira no navegador: um único `index.html`, sem servidor e sem dependênc
 index.html          página pronta (gerada; é o arquivo publicado)
 template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
-build.py            embute motor.js em template.html e gera index.html
-testes/             teste do motor (node testes/motor.test.js)
+cnae.js             enquadramento por CNAE e consulta de CNPJ
+build.py            embute motor.js e cnae.js em template.html e gera index.html
+testes/             node testes/motor.test.js e node testes/cnae.test.js
 ```
 
 ## Como alterar
 
 1. Edite `motor.js` (parâmetros e regras) ou `template.html` (tela).
-2. Rode `node testes/motor.test.js`.
+2. Rode `node testes/motor.test.js` e `node testes/cnae.test.js`.
 3. Rode `python3 build.py` para gerar o `index.html`.
 
 ## Parâmetros (conferidos em 05/11/2026)
