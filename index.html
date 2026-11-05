@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Regimes Tributários — Controller & Oraculu's</title>
+<style>
+  :root {
+    color-scheme: light;
+    --navy: #1b2f5b; --navy-2: #24407a; --gold: #b8913a;
+    --bg: #f4f5f8; --surface: #ffffff; --surface-2: #f8f9fb; --line: #e1e4ea;
+    --text: #14181f; --text-2: #4a5160; --muted: #7a8090;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+    --ok-bg: #e8f5ee; --ok: #12704a; --warn-bg: #fff6e0; --warn: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --navy: #a9bce6; --navy-2: #8ea6dc; --gold: #d4b062;
+      --bg: #121418; --surface: #1a1a19; --surface-2: #22252b; --line: #33373f;
+      --text: #f0efec; --text-2: #c3c2b7; --muted: #959aa5;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --ok-bg: #143224; --ok: #6fd3a4; --warn-bg: #3a2e12; --warn: #f0c46a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; }
+  header { background: #1b2f5b; color: #fff; padding: 18px 24px; border-bottom: 3px solid #b8913a; }
+  header .marca { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #d9c48f; }
+  header h1 { margin: 4px 0 2px; font-size: 22px; font-weight: bold; }
+  header p { margin: 0; color: #c9d3ea; font-size: 13px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 360px 1fr; gap: 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px; } }
+  .painel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .painel h2 { margin: 0 0 12px; font-size: 15px; color: var(--navy); }
+  .grupo { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+  .grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .grupo h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  label { display: block; font-size: 13px; color: var(--text-2); margin: 8px 0 4px; }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: var(--surface); color: var(--text); }
+  input:focus, select:focus { outline: 2px solid var(--navy-2); outline-offset: 0; }
+  .linha2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dica { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text-2); margin-top: 10px; }
+  .check input { width: auto; margin-top: 2px; }
+  .anos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .anos button { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); padding: 7px 14px; border-radius: 20px; cursor: pointer; font: inherit; }
+  .anos button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: var(--surface); font-weight: bold; }
+  .cartoes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 1100px) { .cartoes { grid-template-columns: repeat(2, 1fr); } }
+  .cartao { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; position: relative; }
+  .cartao .nome { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); font-weight: bold; }
+  .cartao .ponto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cartao .valor { font-size: 22px; font-weight: bold; margin: 8px 0 2px; color: var(--text); }
+  .cartao .sub { font-size: 12px; color: var(--muted); }
+  .cartao.melhor { border: 2px solid var(--ok); }
+  .selo { display: inline-block; margin-bottom: 6px; background: var(--ok-bg); color: var(--ok); font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .cartao.ne .valor { font-size: 14px; color: var(--muted); font-weight: normal; }
+  .avisos { margin: 16px 0 0; display: grid; gap: 8px; }
+  .aviso { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+  .secao { margin-top: 20px; }
+  .secao h2 { font-size: 15px; color: var(--navy); margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  thead th { color: var(--text-2); font-weight: bold; background: var(--surface-2); }
+  tr.total td { font-weight: bold; border-top: 2px solid var(--navy); }
+  tr.info td { color: var(--muted); font-size: 12px; }
+  .tabela-wrap { overflow-x: auto; }
+  .graf-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .legenda i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--text-2); padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; font-size: 12px; }
+  .btn.primario { background: var(--navy); color: var(--surface); border-color: var(--navy); font-weight: bold; }
+  .graf { position: relative; margin-top: 10px; }
+  .graf svg { width: 100%; height: auto; display: block; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); min-width: 180px; display: none; }
+  .tip b { display: block; margin-bottom: 4px; color: var(--text); }
+  .tip div { display: flex; justify-content: space-between; gap: 12px; color: var(--text-2); }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+  summary { cursor: pointer; font-weight: bold; color: var(--text-2); }
+  details ul { margin: 8px 0 0; padding-left: 18px; color: var(--text-2); font-size: 13px; }
+  details li { margin: 3px 0; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  footer { max-width: 1280px; margin: 0 auto; padding: 0 20px 30px; color: var(--muted); font-size: 12px; }
+  .ok-msg { color: var(--ok); font-size: 12px; align-self: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">Controller & Oraculu's · Departamento Societário e de Legalização</div>
+  <h1>Calculadora de Regimes Tributários 2026–2033</h1>
+  <p>Simples Nacional, Simples Híbrido, Lucro Presumido e Lucro Real, com a transição da reforma (EC 132/2023, LC 214/2025) e a tributação de dividendos (Lei 15.270/2025).</p>
+</header>
+
+<main>
+  <form class="painel" id="form" autocomplete="off">
+    <h2>Dados da empresa (valores por mês)</h2>
+    <div class="grupo">
+      <h3>Empresa</h3>
+      <label for="cliente">Cliente (opcional)</label>
+      <input id="cliente" type="text" placeholder="Razão social">
+      <label for="atividade">Atividade</label>
+      <select id="atividade"></select>
+      <label for="reducao">Redução de CBS/IBS da atividade</label>
+      <select id="reducao">
+        <option value="0">Sem redução (alíquota padrão)</option>
+        <option value="0.3">30% — profissões regulamentadas (LC 214, art. 127)</option>
+        <option value="0.6">60% — saúde, educação e outros (LC 214, arts. 128 a 138)</option>
+      </select>
+    </div>
+    <div class="grupo">
+      <h3>Faturamento e custos</h3>
+      <label for="receita">Faturamento mensal (R$)</label>
+      <input id="receita" type="number" min="0" step="100" value="60000">
+      <div class="dica" id="dica-rbt"></div>
+      <label for="margem">Lucro antes de todos os tributos (% do faturamento)</label>
+      <input id="margem" type="number" min="0" max="100" step="0.5" value="40">
+      <div class="dica">Receita menos custos e despesas, antes de impostos sobre vendas, folha e lucro.</div>
+      <label for="compras">Compras com crédito por mês (R$)</label>
+      <input id="compras" type="number" min="0" step="100" value="0">
+      <div class="dica">Mercadorias e insumos comprados de empresas fora do Simples.</div>
+      <div class="linha2">
+        <div><label for="icms">ICMS sobre vendas (%)</label><input id="icms" type="number" min="0" max="40" step="0.5" value="18"></div>
+        <div><label for="iss">ISS (%)</label><input id="iss" type="number" min="0" max="5" step="0.5" value="5"></div>
+      </div>
+    </div>
+    <div class="grupo">
+      <h3>Folha e sócios</h3>
+      <label for="folha">Folha mensal com pró-labore (R$)</label>
+      <input id="folha" type="number" min="0" step="100" value="20000">
+      <label for="rat">Encargos além da CPP de 20% (%)</label>
+      <input id="rat" type="number" min="0" max="15" step="0.1" value="0">
+      <div class="dica">RAT/FAP + terceiros no Presumido e no Real (ex.: 7,8% sobre empregados).</div>
+      <div class="linha2">
+        <div><label for="socios">Nº de sócios</label><input id="socios" type="number" min="1" step="1" value="2"></div>
+        <div><label for="dist">Lucro distribuído (%)</label><input id="dist" type="number" min="0" max="100" step="5" value="100"></div>
+      </div>
+      <label class="check"><input id="retemSimples" type="checkbox" checked> Aplicar a retenção de 10% sobre dividendos também no Simples (posição da Receita; tema em discussão na ADI 7.917)</label>
+    </div>
+    <div class="grupo">
+      <h3>Alíquotas de referência</h3>
+      <div class="linha2">
+        <div><label for="cbsRef">CBS de referência (%)</label><input id="cbsRef" type="number" min="0" max="30" step="0.01" value="11.3"></div>
+        <div><label for="ibsRef">IBS de referência (%)</label><input id="ibsRef" type="number" min="0" max="30" step="0.01" value="18.7"></div>
+      </div>
+      <div class="dica">CBS 11,3% calculada pelo TCU em 28/10/2026; o Senado fixa até 15/12/2026. IBS 18,7% é a estimativa da Res. CGIBS 14/2026 (usada a partir de 2029).</div>
+    </div>
+    <div class="acoes">
+      <button class="btn" type="button" id="limpar">Restaurar exemplo</button>
+    </div>
+  </form>
+
+  <section>
+    <div class="anos" id="anos" role="group" aria-label="Ano da simulação"></div>
+    <div class="cartoes" id="cartoes"></div>
+    <div class="avisos" id="avisos"></div>
+
+    <div class="secao painel">
+      <h2 id="titulo-tabela">Tributos por regime</h2>
+      <div class="tabela-wrap"><table id="tabela"></table></div>
+    </div>
+
+    <div class="secao painel">
+      <div class="graf-top">
+        <h2 style="margin:0">Carga tributária anual, 2026 a 2033</h2>
+        <div class="legenda" id="legenda"></div>
+        <button class="btn" type="button" id="ver-tabela">Ver como tabela</button>
+      </div>
+      <div class="graf" id="graf"><div class="tip" id="tip"></div></div>
+      <div class="tabela-wrap" id="tab-proj" hidden></div>
+    </div>
+
+    <div class="secao">
+      <h2>Memória de cálculo do ano selecionado</h2>
+      <div id="memoria"></div>
+    </div>
+
+    <div class="secao">
+      <h2>Premissas</h2>
+      <details>
+        <summary>Como a calculadora trabalha</summary>
+        <ul>
+          <li>Valores informados por mês; resultados anuais = mês × 12. O faturamento de 12 meses (RBT12) é o mensal × 12.</li>
+          <li>Preço total ao cliente mantido: na reforma, a CBS e o IBS estão contidos no valor faturado. A base de CBS/IBS exclui ICMS e ISS.</li>
+          <li>2026: CBS 0,9% e IBS 0,1% de teste, compensados com PIS/COFINS. 2027–2028: CBS = referência − 0,1 p.p. e IBS 0,1%. 2029–2032: ICMS/ISS a 90/80/70/60% e IBS a 10/20/30/40% da referência. 2033: alíquotas cheias.</li>
+          <li>Crédito das compras na alíquota cheia, como se os fornecedores estivessem no regime regular. ICMS com crédito das compras; ISS sem crédito.</li>
+          <li>Simples puro: o total do DAS se mantém na transição; a fatia de PIS/COFINS passa a ser CBS/IBS (LC 214, Anexos XVIII a XXII). O comprador só aproveita o crédito do valor pago no DAS (LC 214, art. 47, parágrafo 9º). Acima do sublimite, ICMS/ISS e IBS ficam fora do DAS.</li>
+          <li>Simples Híbrido: DAS sem a fatia de CBS/IBS, calculado sobre o faturamento sem a CBS/IBS contida no preço, mais CBS/IBS pelo regime regular. A opção é semestral (Res. CGSN 186/2026 e 194/2026).</li>
+          <li>Presumido: presunção da Lei 9.249/1995 com o acréscimo de 10% da LC 224/2025 sobre a parte da receita acima de R$ 5 mi por ano (CSLL ponderada em 2026, por valer desde abril). PIS/COFINS de 2026 sem o ICMS na base (Tema 69 do STF).</li>
+          <li>Real: o lucro tributável é o lucro antes dos tributos menos os tributos sobre consumo e folha. PIS/COFINS de 2026 com crédito de 9,25% sobre as compras informadas.</li>
+          <li>Dividendos: retenção de 10% sobre o total do mês quando o valor por sócio passa de R$ 50 mil (Lei 9.250/1995, art. 6º-A). O IRPFM anual (acima de R$ 600 mil) não está no cálculo.</li>
+          <li>Não considera: retenções na fonte, ICMS-ST, DIFAL, IPI, regimes específicos (imóveis, combustíveis, financeiro), incentivos fiscais e decisões judiciais individuais.</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="acoes">
+      <button class="btn primario" type="button" id="copiar">Copiar resumo</button>
+      <span class="ok-msg" id="copiado" hidden>Resumo copiado.</span>
+    </div>
+  </section>
+</main>
+<footer>
+  Estimativa para apoio ao estudo tributário; não substitui o parecer. Parâmetros conferidos em <span id="versao"></span>. Controller & Oraculu's — Rua Antônio Abude, 14, Jd. Barbosa, Guarulhos/SP · (11) 2087-6740 · www.controller-oraculus.com.br
+</footer>
+
+<script>
+/* Motor da Calculadora de Regimes — Controller & Oraculu's
+ * Parâmetros conferidos em 05/11/2026. Valores mensais; o resultado anual é ×12.
+ * Sem DOM: roda no navegador e no Node (testes). */
+(function (raiz) {
+  'use strict';
+
+  const PARAM = {
+    versao: '2026-11-05',
+    limiteSimples: 4800000,
+    fatorR: 0.28,
+    // Faixas: [teto RBT12, alíquota nominal, parcela a deduzir] — LC 123/2006, Anexos I a V
+    // pc = % do DAS que é PIS+COFINS (vira CBS/IBS em 2027); loc = % do DAS que é ICMS/ISS
+    anexos: {
+      I:   {nome: 'Anexo I', faixas: [[180000,.04,0],[360000,.073,5940],[720000,.095,13860],[1800000,.107,22500],[3600000,.143,87300],[4800000,.19,378000]],
+            pc: [15.5,15.5,15.5,15.5,15.5,34.4], loc: [34,34,33.5,33.5,33.5,0], cppNoDas: true},
+      II:  {nome: 'Anexo II', faixas: [[180000,.045,0],[360000,.078,5940],[720000,.10,13860],[1800000,.112,22500],[3600000,.147,85500],[4800000,.30,720000]],
+            pc: [14,14,14,14,14,25.5], loc: [32,32,32,32,32,0], cppNoDas: true},
+      III: {nome: 'Anexo III', faixas: [[180000,.06,0],[360000,.112,9360],[720000,.135,17640],[1800000,.16,35640],[3600000,.21,125640],[4800000,.33,648000]],
+            pc: [15.6,17.1,16.6,16.6,15.6,19.5], loc: [33.5,32,32.5,32.5,33.5,0], cppNoDas: true},
+      IV:  {nome: 'Anexo IV', faixas: [[180000,.045,0],[360000,.09,8100],[720000,.102,12420],[1800000,.14,39780],[3600000,.22,183780],[4800000,.33,828000]],
+            pc: [21.5,25,24,23,22,25], loc: [44.5,40,40,40,40,0], cppNoDas: false},
+      V:   {nome: 'Anexo V', faixas: [[180000,.155,0],[360000,.18,4500],[720000,.195,9900],[1800000,.205,17100],[3600000,.23,62100],[4800000,.305,540000]],
+            pc: [17.15,17.15,18.15,19.15,17.15,20], loc: [14,17,19,21,23.5,0], cppNoDas: true}
+    },
+    // Atividades: anexo do Simples, tributo local e presunção do Presumido (Lei 9.249/1995, arts. 15 e 20)
+    atividades: {
+      comercio:   {nome: 'Comércio', anexo: 'I', local: 'ICMS', pIR: .08, pCS: .12},
+      industria:  {nome: 'Indústria', anexo: 'II', local: 'ICMS', pIR: .08, pCS: .12},
+      servicos3:  {nome: 'Serviços — Anexo III', anexo: 'III', local: 'ISS', pIR: .32, pCS: .32},
+      servicos4:  {nome: 'Serviços — Anexo IV (limpeza, vigilância, obras, advocacia)', anexo: 'IV', local: 'ISS', pIR: .32, pCS: .32},
+      servicos5:  {nome: 'Serviços — Anexo V (sujeito ao Fator R)', anexo: 'V', local: 'ISS', pIR: .32, pCS: .32, fatorR: true},
+      construcao: {nome: 'Construção com fornecimento de material', anexo: 'IV', local: 'ISS', pIR: .08, pCS: .12}
+    },
+    irpj: {aliq: .15, adicional: .10, limiteMes: 20000},
+    csll: .09,
+    pisCofinsCumul: .0365,
+    pisCofinsNaoCumul: .0925,
+    cpp: .20,
+    lc224: {limiteAno: 5000000, acrescimo: .10},
+    dividendos: {limiteMes: 50000, aliq: .10},
+    // ICMS/ISS remanescentes: EC 132/2023, ADCT, arts. 128 e 129
+    fatorLocal: {2026: 1, 2027: 1, 2028: 1, 2029: .9, 2030: .8, 2031: .7, 2032: .6, 2033: 0},
+    fracaoIbs: {2029: .1, 2030: .2, 2031: .3, 2032: .4, 2033: 1},
+    anos: [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
+  };
+
+  function aliquotas(ano, cbsRef, ibsRef) {
+    if (ano === 2026) return {cbs: .009, ibs: .001, teste: true};
+    if (ano <= 2028) return {cbs: Math.max(0, cbsRef - .001), ibs: .001, teste: false};
+    return {cbs: cbsRef, ibs: ibsRef * PARAM.fracaoIbs[ano], teste: false};
+  }
+
+  function faixa(rbt12, anexo, ano) {
+    const tab = PARAM.anexos[anexo];
+    let i = tab.faixas.findIndex(f => rbt12 <= f[0]);
+    if (i < 0) return null;
+    let nominal = tab.faixas[i][1];
+    if (i === 5 && (ano === 2027 || ano === 2028)) nominal -= .001; // LC 214/2025, art. 519
+    const pd = tab.faixas[i][2];
+    const efetiva = rbt12 > 0 ? (rbt12 * nominal - pd) / rbt12 : tab.faixas[0][1];
+    return {indice: i, numero: i + 1, nominal, pd, efetiva, pc: tab.pc[i] / 100, loc: tab.loc[i] / 100, cppNoDas: tab.cppNoDas, nomeAnexo: tab.nome};
+  }
+
+  const r2 = v => Math.round(v * 100) / 100;
+
+  function calcular(e, ano) {
+    const at = PARAM.atividades[e.atividade] || PARAM.atividades.comercio;
+    const R = Math.max(0, +e.receita || 0);
+    const F = Math.max(0, +e.folha || 0);
+    const C = Math.max(0, +e.compras || 0);
+    const lucroAntes = R * (+e.margem || 0);
+    const icms = at.local === 'ICMS' ? (+e.icms || 0) : 0;
+    const iss = at.local === 'ISS' ? (+e.iss || 0) : 0;
+    const fL = PARAM.fatorLocal[ano];
+    const red = +e.reducao || 0;
+    const encargos = PARAM.cpp + (+e.ratTerceiros || 0);
+    const ali = aliquotas(ano, +e.cbsRef, +e.ibsRef);
+
+    // Tributo local (ICMS com crédito das compras; ISS sem crédito)
+    const localDeb = R * (icms + iss) * fL;
+    const localCred = C * icms * fL;
+    const localLiq = Math.max(0, localDeb - localCred);
+    const localNome = at.local;
+
+    // CBS/IBS no regime regular (preço total mantido: tributo contido no valor da venda)
+    function regular() {
+      const tCheia = ali.cbs + ali.ibs;
+      const tVenda = tCheia * (1 - red);
+      const baseVenda = Math.max(0, R - localDeb);
+      const deb = tVenda * baseVenda / (1 + tVenda);
+      const baseCompra = Math.max(0, C - C * icms * fL);
+      const cred = tCheia * baseCompra / (1 + tCheia);
+      const liq = Math.max(0, deb - cred);
+      const saldoCredor = Math.max(0, cred - deb);
+      const pCbs = tCheia > 0 ? ali.cbs / tCheia : 0;
+      return {deb, cred, liq, saldoCredor, cbs: liq * pCbs, ibs: liq * (1 - pCbs), tVenda};
+    }
+    const reg = ano >= 2027 ? regular() : null;
+
+    const out = {ano, ali, regimes: {}, avisos: []};
+    const memo = (texto, valor) => ({texto, valor});
+
+    /* ---------- Simples Nacional ---------- */
+    let anexo = at.anexo, fatorR = null;
+    if (at.fatorR) {
+      fatorR = R > 0 ? F / R : 0;
+      if (fatorR >= PARAM.fatorR) anexo = 'III';
+    }
+    out.fatorR = fatorR;
+    out.anexo = anexo;
+    const rbt12 = R * 12;
+    const fx = rbt12 <= PARAM.limiteSimples ? faixa(rbt12, anexo, ano) : null;
+    out.faixa = fx;
+    if (!fx) {
+      const motivo = 'Receita acima de R$ 4,8 milhões por ano (LC 123/2006, art. 3º, II).';
+      out.regimes.simples = {elegivel: false, motivo};
+      out.regimes.hibrido = {elegivel: false, motivo};
+    } else {
+      const sexta = fx.indice === 5;
+      const localFora = sexta ? localLiq : 0;
+      const cppFora = fx.cppNoDas ? 0 : F * PARAM.cpp;
+      // Puro
+      const das = R * fx.efetiva;
+      const cbsIbsNoDas = ano >= 2027 ? das * (fx.pc + fx.loc * (1 - fL)) : 0;
+      const itensP = [{nome: 'DAS', valor: das}];
+      if (cbsIbsNoDas) itensP.push({nome: '  dos quais CBS/IBS', valor: cbsIbsNoDas, info: true});
+      // Acima do sublimite, o IBS (sucessor do ICMS/ISS) também é pago fora do DAS — PREMISSA por analogia ao art. 13-A da LC 123
+      const ibsFora = sexta && reg ? reg.ibs : 0;
+      if (localFora) itensP.push({nome: localNome + ' fora do DAS (acima do sublimite)', valor: localFora});
+      if (ibsFora) itensP.push({nome: 'IBS fora do DAS (acima do sublimite)', valor: ibsFora});
+      if (cppFora) itensP.push({nome: 'CPP 20% (Anexo IV, fora do DAS)', valor: cppFora});
+      const totP = das + localFora + ibsFora + cppFora;
+      out.regimes.simples = {
+        elegivel: true, itens: itensP, total: totP, credito: cbsIbsNoDas,
+        memoria: [
+          memo(fx.nomeAnexo + (at.fatorR ? (anexo === 'III' ? ' (Fator R ' + (fatorR * 100).toFixed(1) + '% ≥ 28%)' : ' (Fator R ' + (fatorR * 100).toFixed(1) + '% < 28%)') : '') + ', ' + fx.numero + 'ª faixa', null),
+          memo('RBT12 = receita mensal × 12', rbt12),
+          memo('Alíquota nominal ' + (fx.nominal * 100).toFixed(2) + '%, parcela a deduzir', fx.pd),
+          memo('Alíquota efetiva = (RBT12 × nominal − PD) ÷ RBT12 = ' + (fx.efetiva * 100).toFixed(4) + '%', null),
+          memo('DAS = receita × alíquota efetiva', das)
+        ]
+      };
+      // Híbrido
+      if (ano < 2027) {
+        out.regimes.hibrido = {elegivel: false, motivo: 'Opção existe a partir de 2027 (LC 214/2025, art. 41, parágrafo 3º).'};
+      } else {
+        const receitaDas = R - reg.deb;
+        const fatiaTirada = fx.pc + fx.loc * (1 - fL);
+        const dasH = receitaDas * fx.efetiva * (1 - fatiaTirada);
+        const itensH = [{nome: 'DAS sem a fatia de CBS/IBS', valor: dasH}, {nome: 'CBS', valor: reg.cbs}, {nome: 'IBS', valor: reg.ibs}];
+        if (localFora) itensH.push({nome: localNome + ' fora do DAS (acima do sublimite)', valor: localFora});
+        if (cppFora) itensH.push({nome: 'CPP 20% (Anexo IV, fora do DAS)', valor: cppFora});
+        out.regimes.hibrido = {
+          elegivel: true, itens: itensH, total: dasH + reg.liq + localFora + cppFora, credito: reg.deb, saldoCredor: reg.saldoCredor,
+          memoria: [
+            memo('Receita para o DAS = receita − CBS/IBS contidos no preço', receitaDas),
+            memo('DAS = receita do DAS × ' + (fx.efetiva * 100).toFixed(4) + '% × (1 − ' + (fatiaTirada * 100).toFixed(2) + '% de fatia CBS/IBS)', dasH),
+            memo('Débito CBS/IBS = ' + (reg.tVenda * 100).toFixed(2) + '% × base ÷ (1 + alíquota)', reg.deb),
+            memo('(−) Crédito das compras', -reg.cred)
+          ]
+        };
+      }
+    }
+
+    /* ---------- Lucro Presumido ---------- */
+    {
+      const recBruta = reg ? R - reg.deb : R;
+      const anual = recBruta * 12;
+      const fracExc = anual > PARAM.lc224.limiteAno ? (anual - PARAM.lc224.limiteAno) / anual : 0;
+      const pesoCsll = ano === 2026 ? 0.75 : 1; // CSLL majorada só a partir de abr/2026
+      const pIR = at.pIR * (1 + PARAM.lc224.acrescimo * fracExc);
+      const pCS = at.pCS * (1 + PARAM.lc224.acrescimo * fracExc * pesoCsll);
+      const baseIR = recBruta * pIR;
+      const irpj = PARAM.irpj.aliq * baseIR + PARAM.irpj.adicional * Math.max(0, baseIR - PARAM.irpj.limiteMes);
+      const csll = PARAM.csll * recBruta * pCS;
+      const itens = [{nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll}];
+      let consumo;
+      if (!reg) {
+        consumo = PARAM.pisCofinsCumul * Math.max(0, R - R * icms * fL); // ICMS fora da base (Tema 69 STF)
+        itens.push({nome: 'PIS/COFINS cumulativo (3,65%)', valor: consumo});
+      } else {
+        consumo = reg.liq;
+        itens.push({nome: 'CBS', valor: reg.cbs}, {nome: 'IBS', valor: reg.ibs});
+      }
+      if (localLiq) itens.push({nome: localNome, valor: localLiq});
+      const cpp = F * encargos;
+      itens.push({nome: 'CPP + encargos sobre a folha', valor: cpp});
+      const memoria = [
+        memo('Presunção IRPJ ' + (pIR * 100).toFixed(2) + '% / CSLL ' + (pCS * 100).toFixed(2) + '%' + (fracExc > 0 ? ' (acréscimo da LC 224/2025 sobre a receita acima de R$ 5 mi)' : ''), null),
+        memo('Base do IRPJ', baseIR),
+        memo('IRPJ = 15% + 10% sobre o que passar de R$ 20 mil/mês', irpj),
+        memo('CSLL = 9% × receita × presunção', csll)
+      ];
+      if (fracExc > 0) out.avisos.push('Lucro Presumido com receita acima de R$ 5 milhões: aplicado o acréscimo da LC 224/2025, que está sendo discutido em liminares e ADIs no STF.');
+      out.regimes.presumido = {elegivel: anual <= 78000000, motivo: 'Receita acima de R$ 78 milhões por ano.', itens, total: irpj + csll + consumo + localLiq + cpp, credito: reg ? reg.deb : 0, saldoCredor: reg ? reg.saldoCredor : 0, memoria};
+    }
+
+    /* ---------- Lucro Real ---------- */
+    {
+      let consumo;
+      const itens = [];
+      if (!reg) {
+        consumo = Math.max(0, PARAM.pisCofinsNaoCumul * (R - R * icms * fL) - PARAM.pisCofinsNaoCumul * C);
+        itens.push({nome: 'PIS/COFINS não cumulativo (9,25% − créditos)', valor: consumo});
+      } else {
+        consumo = reg.liq;
+        itens.push({nome: 'CBS', valor: reg.cbs}, {nome: 'IBS', valor: reg.ibs});
+      }
+      if (localLiq) itens.push({nome: localNome, valor: localLiq});
+      const cpp = F * encargos;
+      itens.push({nome: 'CPP + encargos sobre a folha', valor: cpp});
+      const lucroReal = Math.max(0, lucroAntes - consumo - localLiq - cpp);
+      const irpj = PARAM.irpj.aliq * lucroReal + PARAM.irpj.adicional * Math.max(0, lucroReal - PARAM.irpj.limiteMes);
+      const csll = PARAM.csll * lucroReal;
+      itens.unshift({nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll});
+      out.regimes.real = {
+        elegivel: true, itens, total: irpj + csll + consumo + localLiq + cpp, credito: reg ? reg.deb : 0, saldoCredor: reg ? reg.saldoCredor : 0,
+        memoria: [
+          memo('Lucro antes dos tributos = receita × margem', lucroAntes),
+          memo('(−) tributos sobre consumo e folha (dedutíveis)', -(consumo + localLiq + cpp)),
+          memo('Lucro real', lucroReal),
+          memo('IRPJ 15% + adicional 10% acima de R$ 20 mil/mês', irpj),
+          memo('CSLL 9%', csll)
+        ]
+      };
+    }
+
+    /* ---------- Distribuição aos sócios (Lei 15.270/2025) ---------- */
+    const nS = Math.max(1, Math.round(+e.socios || 1));
+    const pDist = Math.min(1, Math.max(0, +e.distribuicao || 0));
+    Object.keys(out.regimes).forEach(k => {
+      const g = out.regimes[k];
+      if (!g.elegivel) return;
+      g.efetiva = R > 0 ? g.total / R : 0;
+      g.sobra = lucroAntes - g.total;
+      const dist = Math.max(0, g.sobra) * pDist;
+      const porSocio = dist / nS;
+      const aplica = (k === 'simples' || k === 'hibrido') ? e.retemSimples !== false : true;
+      g.dividendosSocio = porSocio;
+      g.retencao = aplica && porSocio > PARAM.dividendos.limiteMes ? dist * PARAM.dividendos.aliq : 0;
+      g.liquidoSocios = dist - g.retencao;
+    });
+
+    // Avisos
+    const elegs = Object.values(out.regimes).filter(g => g.elegivel);
+    if (elegs.length && elegs.every(g => g.sobra < 0)) out.avisos.push('Mesmo no regime mais barato os tributos passam do lucro informado: confira a margem e as compras.');
+    if (ano === 2026) out.avisos.push('Em 2026 a CBS (0,9%) e o IBS (0,1%) são de teste e compensados com PIS/COFINS: custo zero se as obrigações acessórias forem cumpridas. Arraste para 2027 para ver a reforma.');
+    if (fx && fx.indice === 5) out.avisos.push('Receita acima do sublimite de R$ 3,6 milhões: ' + localNome + ' sai do DAS e é pago pelas regras normais.');
+    if (at.fatorR && fatorR !== null && fatorR >= .28 && fatorR < .31) out.avisos.push('Fator R em ' + (fatorR * 100).toFixed(1) + '%, perto do limite de 28%: uma queda na folha leva ao Anexo V.');
+    if (at.fatorR && fatorR !== null && fatorR < .28) out.avisos.push('Fator R em ' + (fatorR * 100).toFixed(1) + '%: faltam ' + brl((.28 - fatorR) * R) + ' de folha por mês (pró-labore incluído) para ir ao Anexo III.');
+    if (reg && (reg.saldoCredor > 0)) out.avisos.push('Os créditos das compras superam os débitos de CBS/IBS no regime regular: há saldo credor a ressarcir (LC 214/2025).');
+    if (fx && fx.indice < 5) {
+      const folga = fx.indice >= 0 ? PARAM.anexos[anexo].faixas[fx.indice][0] - rbt12 : 0;
+      if (folga > 0 && folga < PARAM.anexos[anexo].faixas[fx.indice][0] * .05) out.avisos.push('Receita de 12 meses a ' + brl(folga) + ' da próxima faixa do Simples.');
+    }
+    return out;
+  }
+
+  function brl(v) { return (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0}); }
+
+  function projecao(e) { return PARAM.anos.map(a => calcular(e, a)); }
+
+  const api = {PARAM, calcular, projecao, aliquotas, faixa, brl, r2};
+  if (typeof module === 'object' && module.exports) module.exports = api; else raiz.Motor = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const M = window.Motor;
+  const $ = id => document.getElementById(id);
+  const REG = [
+    {k: 'simples', nome: 'Simples Nacional', cor: '--s1'},
+    {k: 'hibrido', nome: 'Simples Híbrido', cor: '--s2'},
+    {k: 'presumido', nome: 'Lucro Presumido', cor: '--s3'},
+    {k: 'real', nome: 'Lucro Real', cor: '--s4'}
+  ];
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
+  const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+  const cor = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const PADRAO = {cliente: '', atividade: 'servicos5', reducao: '0', receita: 60000, margem: 40, compras: 0, icms: 18, iss: 5, folha: 20000, rat: 0, socios: 2, dist: 100, retemSimples: true, cbsRef: 11.3, ibsRef: 18.7};
+  let ano = 2027;
+
+  // Atividades
+  Object.entries(M.PARAM.atividades).forEach(([k, a]) => {
+    const o = document.createElement('option'); o.value = k; o.textContent = a.nome; $('atividade').appendChild(o);
+  });
+  $('versao').textContent = M.PARAM.versao.split('-').reverse().join('/');
+
+  function aplicar(v) {
+    Object.keys(PADRAO).forEach(k => {
+      const el = $(k); if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!v[k]; else el.value = v[k];
+    });
+  }
+  function lerForm() {
+    const n = id => parseFloat($(id).value) || 0;
+    return {
+      atividade: $('atividade').value, reducao: parseFloat($('reducao').value),
+      receita: n('receita'), margem: n('margem') / 100, compras: n('compras'),
+      icms: n('icms') / 100, iss: n('iss') / 100, folha: n('folha'), ratTerceiros: n('rat') / 100,
+      socios: n('socios') || 1, distribuicao: n('dist') / 100, retemSimples: $('retemSimples').checked,
+      cbsRef: n('cbsRef') / 100, ibsRef: n('ibsRef') / 100
+    };
+  }
+  function salvar() {
+    try {
+      const v = {}; Object.keys(PADRAO).forEach(k => { const el = $(k); v[k] = el.type === 'checkbox' ? el.checked : el.value; });
+      localStorage.setItem('co-calc-regimes', JSON.stringify(v));
+    } catch (e) {}
+  }
+  function carregar() {
+    try { const s = localStorage.getItem('co-calc-regimes'); if (s) return Object.assign({}, PADRAO, JSON.parse(s)); } catch (e) {}
+    return PADRAO;
+  }
+
+  // Anos
+  M.PARAM.anos.forEach(a => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = a; b.dataset.ano = a;
+    b.addEventListener('click', () => { ano = a; render(); });
+    $('anos').appendChild(b);
+  });
+
+  function campos() {
+    const at = M.PARAM.atividades[$('atividade').value];
+    $('icms').disabled = at.local !== 'ICMS';
+    $('iss').disabled = at.local !== 'ISS';
+    const r = parseFloat($('receita').value) || 0;
+    $('dica-rbt').textContent = 'Faturamento de 12 meses: ' + brl(r * 12) + (r * 12 > 4800000 ? ' — acima do limite do Simples.' : '');
+  }
+
+  let proj = [];
+  function render() {
+    campos();
+    const e = lerForm();
+    proj = M.projecao(e);
+    const res = proj.find(p => p.ano === ano);
+    document.querySelectorAll('#anos button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ano === ano)));
+
+    // Ranking pelo menor total
+    const eleg = REG.filter(g => res.regimes[g.k] && res.regimes[g.k].elegivel);
+    const melhor = eleg.slice().sort((a, b) => res.regimes[a.k].total - res.regimes[b.k].total)[0];
+
+    // Cartões
+    $('cartoes').innerHTML = REG.map(g => {
+      const r = res.regimes[g.k];
+      if (!r || !r.elegivel) return '<div class="cartao ne"><div class="nome"><span class="ponto" style="background:var(' + g.cor + ')"></span>' + g.nome + '</div><div class="valor">Não se aplica</div><div class="sub">' + (r ? r.motivo : '') + '</div></div>';
+      const top = melhor && melhor.k === g.k;
+      const dif = top ? '' : '<div class="sub">+' + brl((r.total - res.regimes[melhor.k].total) * 12) + ' por ano</div>';
+      return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') +
+        '<div class="nome"><span class="ponto" style="background:var(' + g.cor + ')"></span>' + g.nome + '</div>' +
+        '<div class="valor">' + brl(r.total * 12) + '</div><div class="sub">' + pct(r.efetiva) + ' do faturamento · ' + brl(r.total) + '/mês</div>' + dif + '</div>';
+    }).join('');
+
+    $('avisos').innerHTML = res.avisos.map(a => '<div class="aviso">' + a + '</div>').join('');
+
+    // Tabela
+    $('titulo-tabela').textContent = 'Tributos por regime em ' + ano + ' (valores anuais)';
+    const nomes = [];
+    eleg.forEach(g => res.regimes[g.k].itens.forEach(it => { if (!nomes.includes(it.nome)) nomes.push(it.nome); }));
+    const ordem = ['IRPJ', 'CSLL'];
+    nomes.sort((a, b) => (ordem.indexOf(a) < 0 ? 9 : ordem.indexOf(a)) - (ordem.indexOf(b) < 0 ? 9 : ordem.indexOf(b)));
+    let h = '<thead><tr><th>Tributo</th>' + eleg.map(g => '<th>' + g.nome + '</th>').join('') + '</tr></thead><tbody>';
+    nomes.forEach(n => {
+      const info = eleg.some(g => (res.regimes[g.k].itens.find(i => i.nome === n) || {}).info);
+      h += '<tr' + (info ? ' class="info"' : '') + '><td>' + n.trim() + '</td>' + eleg.map(g => { const it = res.regimes[g.k].itens.find(i => i.nome === n); return '<td>' + (it ? brl(it.valor * 12) : '—') + '</td>'; }).join('') + '</tr>';
+    });
+    h += '<tr class="total"><td>Total de tributos</td>' + eleg.map(g => '<td>' + brl(res.regimes[g.k].total * 12) + '</td>').join('') + '</tr>';
+    const linhaT = (rot, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + rot + '</td>' + eleg.map(g => '<td>' + f(res.regimes[g.k]) + '</td>').join('') + '</tr>';
+    h += linhaT('Carga sobre o faturamento', r => pct(r.efetiva));
+    h += linhaT('Lucro depois dos tributos', r => brl(r.sobra * 12));
+    h += linhaT('Retenção de 10% sobre dividendos', r => r.retencao ? brl(r.retencao * 12) : '—');
+    h += linhaT('Líquido distribuído aos sócios', r => brl(r.liquidoSocios * 12));
+    h += linhaT('Crédito de CBS/IBS gerado ao cliente', r => ano >= 2027 ? brl(r.credito * 12) : '—');
+    h += '</tbody>';
+    $('tabela').innerHTML = h;
+
+    // Memória
+    $('memoria').innerHTML = eleg.map(g => {
+      const r = res.regimes[g.k];
+      return '<details><summary>' + g.nome + '</summary><ul>' + (r.memoria || []).map(m => '<li>' + m.texto + (m.valor !== null ? ': <b>' + brl(m.valor) + '</b> por mês' : '') + '</li>').join('') + '</ul></details>';
+    }).join('');
+
+    grafico();
+    tabelaProj();
+    salvar();
+  }
+
+  // Gráfico de linhas
+  function grafico() {
+    const W = 760, H = 300, m = {t: 16, r: 120, b: 34, l: 74};
+    const anos = M.PARAM.anos;
+    const series = REG.map(g => ({g, pts: proj.map(p => { const r = p.regimes[g.k]; return r && r.elegivel ? r.total * 12 : null; })}));
+    const max = Math.max(1, ...series.flatMap(s => s.pts.filter(v => v !== null)));
+    const bruto = max / 4, mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+    const passo = [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => s >= bruto);
+    const topo = Math.ceil(max / passo) * passo;
+    const x = i => m.l + i * (W - m.l - m.r) / (anos.length - 1);
+    const y = v => H - m.b - v / topo * (H - m.t - m.b);
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Carga tributária anual por regime de 2026 a 2033">';
+    for (let v = 0; v <= topo + 1; v += passo) {
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + cor('--line') + '" stroke-width="1"/>';
+      s += '<text x="' + (m.l - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end" font-size="11" fill="' + cor('--muted') + '">' + abrev(v) + '</text>';
+    }
+    anos.forEach((a, i) => { s += '<text x="' + x(i) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="11" fill="' + (a === ano ? cor('--text') : cor('--muted')) + '" font-weight="' + (a === ano ? 'bold' : 'normal') + '">' + a + '</text>'; });
+    s += '<line id="cross" x1="0" x2="0" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="' + cor('--muted') + '" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>';
+    // rótulos diretos sem colisão
+    const fins = [];
+    series.forEach(se => {
+      const c = cor(se.g.cor);
+      let d = '';
+      se.pts.forEach((v, i) => { if (v === null) return; d += (d ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); });
+      if (!d) return;
+      s += '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      se.pts.forEach((v, i) => { if (v !== null) s += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="' + (anos[i] === ano ? 5 : 3) + '" fill="' + c + '" stroke="' + cor('--surface') + '" stroke-width="2"/>'; });
+      const ult = se.pts[se.pts.length - 1];
+      if (ult !== null) fins.push({y: y(ult), nome: se.g.nome});
+    });
+    fins.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < fins.length; i++) if (fins[i].y - fins[i - 1].y < 14) fins[i].y = fins[i - 1].y + 14;
+    fins.forEach(f => { s += '<text x="' + (W - m.r + 10) + '" y="' + (f.y + 4) + '" font-size="11" fill="' + cor('--text-2') + '">' + f.nome + '</text>'; });
+    s += '<rect id="alvo" x="' + m.l + '" y="' + m.t + '" width="' + (W - m.l - m.r) + '" height="' + (H - m.t - m.b) + '" fill="transparent"/>';
+    s += '</svg>';
+    const g = $('graf'); const tip = $('tip');
+    g.innerHTML = s; g.appendChild(tip);
+    $('legenda').innerHTML = REG.map(r => '<span><i style="background:var(' + r.cor + ')"></i>' + r.nome + '</span>').join('');
+    const svg = g.querySelector('svg'), alvo = g.querySelector('#alvo'), cross = g.querySelector('#cross');
+    function mover(ev) {
+      const pt = svg.getBoundingClientRect();
+      const px = (ev.clientX - pt.left) * W / pt.width;
+      const i = Math.max(0, Math.min(anos.length - 1, Math.round((px - m.l) / ((W - m.l - m.r) / (anos.length - 1)))));
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+      tip.innerHTML = '<b>' + anos[i] + '</b>' + series.map(se => '<div><span>' + se.g.nome + '</span><span>' + (se.pts[i] === null ? '—' : brl(se.pts[i])) + '</span></div>').join('');
+      tip.style.display = 'block';
+      const left = x(i) / W * pt.width;
+      tip.style.left = (left > pt.width / 2 ? left - tip.offsetWidth - 12 : left + 12) + 'px';
+      tip.style.top = '12px';
+    }
+    alvo.addEventListener('mousemove', mover);
+    alvo.addEventListener('mouseleave', () => { tip.style.display = 'none'; cross.setAttribute('visibility', 'hidden'); });
+    alvo.addEventListener('click', ev => { const pt = svg.getBoundingClientRect(); const px = (ev.clientX - pt.left) * W / pt.width; const i = Math.round((px - m.l) / ((W - m.l - m.r) / (anos.length - 1))); if (anos[i]) { ano = anos[i]; render(); } });
+  }
+  function abrev(v) { return v >= 1e6 ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', {maximumFractionDigits: 1}) + ' mi' : 'R$ ' + Math.round(v / 1000) + ' mil'; }
+
+  function tabelaProj() {
+    let h = '<table><thead><tr><th>Regime</th>' + M.PARAM.anos.map(a => '<th>' + a + '</th>').join('') + '</tr></thead><tbody>';
+    REG.forEach(g => { h += '<tr><td>' + g.nome + '</td>' + proj.map(p => { const r = p.regimes[g.k]; return '<td>' + (r && r.elegivel ? brl(r.total * 12) : '—') + '</td>'; }).join('') + '</tr>'; });
+    $('tab-proj').innerHTML = h + '</tbody></table>';
+  }
+  $('ver-tabela').addEventListener('click', () => {
+    const t = $('tab-proj'), g = $('graf');
+    const mostrar = t.hidden; t.hidden = !mostrar; g.hidden = mostrar;
+    $('ver-tabela').textContent = mostrar ? 'Ver como gráfico' : 'Ver como tabela';
+  });
+
+  // Resumo para copiar
+  $('copiar').addEventListener('click', () => {
+    const e = lerForm(); const res = proj.find(p => p.ano === ano);
+    const at = M.PARAM.atividades[e.atividade];
+    let t = 'ESTUDO DE REGIME TRIBUTÁRIO — ' + ($('cliente').value || 'cliente') + '\nController & Oraculu\'s — simulação ' + ano + '\n\n';
+    t += 'Atividade: ' + at.nome + (res.fatorR !== null ? ' (Fator R ' + pct(res.fatorR) + ')' : '') + '\nFaturamento mensal: ' + brl(e.receita) + ' | Folha: ' + brl(e.folha) + ' | Margem: ' + pct(e.margem) + '\n';
+    t += 'CBS de referência: ' + pct(e.cbsRef) + ' | IBS de referência: ' + pct(e.ibsRef) + '\n\nCarga anual por regime:\n';
+    REG.forEach(g => { const r = res.regimes[g.k]; t += '- ' + g.nome + ': ' + (r && r.elegivel ? brl(r.total * 12) + ' (' + pct(r.efetiva) + ')' : 'não se aplica') + '\n'; });
+    t += '\nProjeção anual 2026–2033:\n';
+    REG.forEach(g => { t += '- ' + g.nome + ': ' + proj.map(p => { const r = p.regimes[g.k]; return p.ano + ' ' + (r && r.elegivel ? brl(r.total * 12) : '—'); }).join(' | ') + '\n'; });
+    if (res.avisos.length) t += '\nObservações:\n' + res.avisos.map(a => '- ' + a).join('\n') + '\n';
+    t += '\nEstimativa para apoio ao estudo tributário; não substitui o parecer.';
+    const ok = () => { $('copiado').hidden = false; setTimeout(() => { $('copiado').hidden = true; }, 2500); };
+    try { navigator.clipboard.writeText(t).then(ok, () => fallback(t, ok)); } catch (err) { fallback(t, ok); }
+  });
+  function fallback(t, ok) {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); ok(); } catch (e) {} ta.remove();
+  }
+
+  $('limpar').addEventListener('click', () => { aplicar(PADRAO); render(); });
+  $('form').addEventListener('input', render);
+  $('form').addEventListener('submit', ev => ev.preventDefault());
+  if (window.matchMedia) { try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render); } catch (e) {} }
+
+  aplicar(carregar());
+  render();
+})();
+</script>
+</body>
+</html>
