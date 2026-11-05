@@ -12,7 +12,8 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 ## Aba Construção e Incorporação
 
 - Incorporação / venda de unidades: RET 4% (ou 1% no interesse social) e o RET de transição a partir de 2027 (IRPJ 1,26% + CSLL 0,66% + CBS/IBS 2,08%; LC 214/2025, art. 485, redação da LC 227/2026), comparado com Presumido (presunção 8%/12%) e Real, com CBS/IBS reduzidos em 50% (art. 261), redutor de ajuste (art. 258), redutor social (art. 259) e crédito dos insumos da obra.
-- Construtora (empreitada): CPP × CPRB na transição da Lei 14.973/2024 (2026: 2,7% da receita + 10% da folha; 2027: 1,8% + 15%; 2028: CPP cheia), CBS/IBS com redução de 50% e crédito dos materiais, ISS com dedução de materiais, presunção 8%/12% ou 32%, e Simples Anexo IV.
+- INSS da obra por aferição no Sero (IN RFB 2.021/2021): RMT = área × equivalência × VAU × 20%/15%/12%, menos a remuneração comprovada, × 36,8% (ajustável). Redutor de ajuste corrigido pelo IPCA informado.
+- Construtora (empreitada): retenções na fonte (INSS 11% ou 3,5% com CPRB; ISS) como antecipação de caixa; CPP × CPRB na transição da Lei 14.973/2024 (2026: 2,7% da receita + 10% da folha; 2027: 1,8% + 15%; 2028: CPP cheia), CBS/IBS com redução de 50% e crédito dos materiais, ISS com dedução de materiais, presunção 8%/12% ou 32%, e Simples Anexo IV.
 
 ## Consulta por CNPJ
 

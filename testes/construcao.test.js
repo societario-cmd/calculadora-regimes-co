@@ -12,3 +12,12 @@ for (const a of [2026, 2027, 2028]) { const r = K.construtora(c, a); console.log
 const prev26 = K.construtora(c, 2026).regimes.presumido.itens.find(i => /CPRB/.test(i.nome)).valor;
 assert.strictEqual(Math.round(prev26), Math.round(6000000 * .045 * .6 + 1800000 * (.10 + .088)));
 console.log('CONSTRUCAO OK');
+// aferição: 1.000 m² × 80% × 2.400 × 20% = 384.000; créditos 200.000; diferença 184.000 × 36,8%
+const af = K.incorporacao(Object.assign({}, inc, {area: 1000, equivalencia: .8, vau: 2400, tipoObra: 'alvenaria', folhaObra: 150000, maoObraNotas: 50000, aliqAfericao: .368}), 2027).afericao;
+assert.strictEqual(Math.round(af.rmt), 384000); assert.strictEqual(Math.round(af.inss), Math.round(184000 * .368));
+// IPCA corrige o redutor
+const a0 = K.incorporacao(inc, 2027).regimes.presumido.total, a1 = K.incorporacao(Object.assign({}, inc, {ipca: .2}), 2027).regimes.presumido.total;
+assert.ok(a1 < a0);
+// retenção 3,5% com CPRB em 2026, 11% em 2028
+assert.strictEqual(K.construtora(c, 2026).retencoes.pInss, .035); assert.strictEqual(K.construtora(c, 2028).retencoes.pInss, .11);
+console.log('AFERICAO/RETENCAO OK');

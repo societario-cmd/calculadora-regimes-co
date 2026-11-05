@@ -20,6 +20,10 @@
     redutorSocialLote: 30000,
     // CPRB construção civil: 4,5% da receita (Lei 12.546/2011, art. 7º, IV); transição da Lei 14.973/2024
     cprb: {aliquota: .045, fatorReceita: {2026: .6, 2027: .4}, cppFolha: {2026: .10, 2027: .15}},
+    // Aferição indireta da obra (IN RFB 2.021/2021, art. 25): RMT = área × % equivalência × VAU × % por tipo
+    afericao: {tipo: {alvenaria: .20, madeira: .15, social: .12}, aliquotaTotal: .368},
+    // Retenção sobre cessão de mão de obra/empreitada (Lei 8.212/1991, art. 31): 11%; 3,5% para optante da CPRB (Lei 12.546/2011, art. 7º, parágrafo 6º)
+    retencao: {normal: .11, cprb: .035},
     presuncao: {comMaterial: {ir: .08, cs: .12}, semMaterial: {ir: .32, cs: .32}, imoveis: {ir: .08, cs: .12}}
   };
 
@@ -66,7 +70,7 @@
     let reg = null;
     if (ano >= 2027) {
       const tVenda = tCheia * (1 - PC.reducaoImoveis);
-      const redAjuste = terreno + obra * (+e.obraAte2026 || 0);
+      const redAjuste = (terreno + obra * (+e.obraAte2026 || 0)) * (1 + Math.max(0, +e.ipca || 0)); // atualizado pelo IPCA (art. 258)
       const redSocial = (Math.max(0, +e.unidades || 0) * PC.redutorSocialUnidade) + (Math.max(0, +e.lotes || 0) * PC.redutorSocialLote);
       const base0 = Math.max(0, R - redAjuste);
       const base = Math.max(0, base0 - redSocial);
@@ -109,13 +113,36 @@
     if (reg && reg.saldoCredor > 0) out.avisos.push('No regime regular, os créditos da obra superam o débito de CBS/IBS do ano: há saldo credor a compensar ou ressarcir.');
     if (ano >= 2027) out.avisos.push('RET de transição (LC 214, art. 485): exige patrimônio de afetação e opção pelo RET efetivada até 31/12/2028. Quem compra imóvel de incorporação no RET não toma crédito de CBS/IBS.');
     if (ano === 2026) out.avisos.push('Em 2026 a CBS (0,9%) e o IBS (0,1%) são de teste e compensados: o cálculo usa PIS/COFINS. Veja 2027 para a reforma.');
+    out.afericao = afericao(e);
     fechar(out, lucroAntes, R);
     return out;
   }
 
+  // INSS da obra por aferição indireta no Sero (IN RFB 2.021/2021). Independe do regime de IRPJ/CBS.
+  // e: {area, equivalencia (0–1), vau, tipoObra ('alvenaria'|'madeira'|'social'), folhaObra, maoObraNotas, aliqAfericao}
+  function afericao(e) {
+    const area = Math.max(0, +e.area || 0);
+    if (!area) return null;
+    const eq = Math.min(1, Math.max(0, +e.equivalencia || 0));
+    const vau = Math.max(0, +e.vau || 0);
+    const pTipo = PC.afericao.tipo[e.tipoObra] || PC.afericao.tipo.alvenaria;
+    const cod = area * eq * vau;
+    const rmt = cod * pTipo;
+    const creditos = Math.max(0, +e.folhaObra || 0) + Math.max(0, +e.maoObraNotas || 0);
+    const diferenca = Math.max(0, rmt - creditos);
+    const aliq = +e.aliqAfericao || PC.afericao.aliquotaTotal;
+    return {area, eq, vau, pTipo, cod, rmt, creditos, diferenca, aliq, inss: diferenca * aliq,
+      memoria: [memo('Área equivalente = ' + area.toLocaleString('pt-BR') + ' m² × ' + (eq * 100).toFixed(0) + '%', null),
+        memo('Custo da obra por destinação (COD) = área equivalente × VAU R$ ' + vau.toLocaleString('pt-BR'), cod),
+        memo('RMT = COD × ' + (pTipo * 100) + '% (' + (e.tipoObra === 'madeira' ? 'madeira ou mista' : e.tipoObra === 'social' ? 'alvenaria, interesse social' : 'alvenaria') + '; IN RFB 2.021/2021)', rmt),
+        memo('(−) Remuneração já declarada na obra (DCTFWeb/eSocial no CNO) e mão de obra das notas de empreiteiros', -creditos),
+        memo('Diferença a recolher como base', diferenca),
+        memo('INSS da aferição = diferença × ' + (aliq * 100).toFixed(1).replace('.', ',') + '%', diferenca * aliq)]};
+  }
+
   function memRegular(reg) {
     return [
-      memo('Redutor de ajuste (terreno + obra incorrida até 2026; LC 214, art. 258)', -reg.redAjuste),
+      memo('Redutor de ajuste (terreno + obra incorrida até 2026, corrigidos pelo IPCA; LC 214, art. 258)', -reg.redAjuste),
       memo('Redutor social (R$ 100 mil por unidade residencial nova, R$ 30 mil por lote; art. 259)', -reg.redSocial),
       memo('Base de CBS/IBS', reg.base),
       memo('Débito com alíquota reduzida em 50% (' + (reg.tVenda * 100).toFixed(2) + '%; art. 261)', reg.deb),
@@ -197,7 +224,11 @@
       out.avisos.push('Previdência em ' + ano + ': CPP cheia ' + M.brl(cpp) + ' × CPRB na transição ' + M.brl(alt) + ' — ' + (alt < cpp ? 'a CPRB economiza ' + M.brl(cpp - alt) : 'a CPP cheia sai mais barata em ' + M.brl(alt - cpp)) + '. A opção pela CPRB é anual e irretratável. Em 2028 a CPRB acaba.');
     }
     if (ano === 2026) out.avisos.push('Em 2026 a CBS (0,9%) e o IBS (0,1%) são de teste e compensados: o cálculo usa PIS/COFINS.');
-    out.avisos.push('Retenções na fonte (INSS de 11%, ou 3,5% para optante da CPRB, e ISS) não mudam a carga, mas antecipam caixa.');
+    const cprbAtiva = !!e.cprb && ano <= 2027;
+    const pRet = cprbAtiva ? PC.retencao.cprb : PC.retencao.normal;
+    const baseRet = Math.max(0, R - (e.comMaterial ? mat : 0));
+    out.retencoes = {inss: baseRet * pRet, pInss: pRet, baseInss: baseRet, iss: e.issRetido ? iss : 0, cprbAtiva};
+    out.avisos.push('Retenções na fonte: INSS de ' + (pRet * 100).toFixed(1).replace('.', ',') + '% sobre ' + M.brl(baseRet) + ' = ' + M.brl(out.retencoes.inss) + (e.issRetido ? ' e ISS retido de ' + M.brl(iss) : '') + ' no ano. Não aumentam a carga: o INSS retido é compensado na DCTFWeb e o excedente pode ser restituído.');
     fechar(out, lucroAntes, R);
     return out;
   }
