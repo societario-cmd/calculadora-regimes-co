@@ -24,6 +24,7 @@
     }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; }
   header { background: #1b2f5b; color: #fff; padding: 18px 24px; border-bottom: 3px solid #b8913a; }
   header .marca { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #d9c48f; }
@@ -99,6 +100,9 @@
   .faixa-box div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
   .faixa-box small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
   .faixa-box b { font-size: 16px; }
+  .abas { max-width: 1280px; margin: 0 auto; padding: 14px 20px 0; display: flex; gap: 6px; }
+  .abas button { border: 1px solid var(--line); border-bottom: 0; background: var(--surface-2); color: var(--text-2); padding: 9px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font: inherit; font-weight: bold; }
+  .abas button[aria-selected="true"] { background: var(--surface); color: var(--navy); border-color: var(--navy); }
   .ok-msg { color: var(--ok); font-size: 12px; align-self: center; }
 </style>
 </head>
@@ -108,8 +112,12 @@
   <h1>Calculadora de Regimes Tributários 2026–2033</h1>
   <p>Simples Nacional, Simples Híbrido, Lucro Presumido e Lucro Real, com a transição da reforma (EC 132/2023, LC 214/2025) e a tributação de dividendos (Lei 15.270/2025).</p>
 </header>
+<nav class="abas" role="tablist">
+  <button type="button" role="tab" data-aba="geral" aria-selected="true">Regimes gerais</button>
+  <button type="button" role="tab" data-aba="obra" aria-selected="false">Construção e Incorporação</button>
+</nav>
 
-<main>
+<main id="aba-geral">
   <form class="painel" id="form" autocomplete="off">
     <h2>Dados da empresa (valores por mês)</h2>
     <div class="grupo">
@@ -180,6 +188,7 @@
   <section>
     <div class="anos" id="anos" role="group" aria-label="Ano da simulação"></div>
     <div class="cartoes" id="cartoes"></div>
+    <div class="aviso" id="aviso-obra" hidden style="margin-bottom:12px">Atividade de construção ou incorporação: use a aba <b>Construção e Incorporação</b> para RET, CPRB e venda de unidades com redutores. <button class="btn" type="button" id="ir-obra">Abrir módulo</button></div>
     <div class="faixa-box" id="faixa-box"></div>
     <div class="avisos" id="avisos"></div>
 
@@ -228,6 +237,103 @@
     </div>
   </section>
 </main>
+<main id="aba-obra" hidden>
+  <form class="painel" id="form-obra" autocomplete="off">
+    <h2>Construção e incorporação (valores por ano)</h2>
+    <div class="grupo">
+      <h3>Tipo de operação</h3>
+      <label for="o-tipo">O que a empresa faz</label>
+      <select id="o-tipo">
+        <option value="incorporacao">Incorporação / venda de unidades (empreendimento)</option>
+        <option value="construtora">Construtora — obras por empreitada para terceiros</option>
+      </select>
+      <label for="o-cliente">Cliente / empreendimento (opcional)</label>
+      <input id="o-cliente" type="text" placeholder="Nome">
+    </div>
+    <div class="grupo" data-tipo="incorporacao">
+      <h3>Empreendimento (no ano)</h3>
+      <label for="o-receita-i">Receita recebida no ano (R$)</label>
+      <input id="o-receita-i" type="number" min="0" step="1000" value="10000000">
+      <div class="dica">Parcelas recebidas dos compradores no ano (CBS/IBS e RET incidem a cada recebimento).</div>
+      <label for="o-terreno">Custo do terreno correspondente (R$)</label>
+      <input id="o-terreno" type="number" min="0" step="1000" value="1500000">
+      <label for="o-obra">Custo da obra correspondente (R$)</label>
+      <input id="o-obra" type="number" min="0" step="1000" value="5000000">
+      <div class="linha2">
+        <div><label for="o-ate2026">Obra incorrida até 2026 (%)</label><input id="o-ate2026" type="number" min="0" max="100" step="5" value="30"></div>
+        <div><label for="o-credito">Insumos com crédito (%)</label><input id="o-credito" type="number" min="0" max="100" step="5" value="70"></div>
+      </div>
+      <div class="dica">A obra até 2026 entra no redutor de ajuste; a partir de 2027 os insumos comprados de fornecedores do regime regular geram crédito.</div>
+      <label for="o-despesas">Outras despesas (comercial, administrativo) (R$)</label>
+      <input id="o-despesas" type="number" min="0" step="1000" value="800000">
+      <div class="linha2">
+        <div><label for="o-unidades">Unidades residenciais novas vendidas</label><input id="o-unidades" type="number" min="0" step="1" value="20"></div>
+        <div><label for="o-lotes">Lotes residenciais vendidos</label><input id="o-lotes" type="number" min="0" step="1" value="0"></div>
+      </div>
+      <div class="dica">Redutor social de R$ 100 mil por unidade e R$ 30 mil por lote (LC 214, art. 259).</div>
+      <label class="check"><input id="o-social" type="checkbox"> Empreendimento de interesse social (RET 1% / 0,53% de CBS/IBS)</label>
+    </div>
+    <div class="grupo" data-tipo="construtora" hidden>
+      <h3>Obras (no ano)</h3>
+      <label for="o-receita-c">Receita de obras no ano (R$)</label>
+      <input id="o-receita-c" type="number" min="0" step="1000" value="6000000">
+      <label for="o-folha">Folha anual (R$)</label>
+      <input id="o-folha" type="number" min="0" step="1000" value="1800000">
+      <label for="o-margem">Lucro antes de todos os tributos (% da receita)</label>
+      <input id="o-margem" type="number" min="0" max="100" step="0.5" value="25">
+      <label class="check"><input id="o-commaterial" type="checkbox" checked> Empreitada com fornecimento de material (presunção de 8%/12%)</label>
+      <label for="o-material">Materiais aplicados (% da receita)</label>
+      <input id="o-material" type="number" min="0" max="100" step="1" value="35">
+      <div class="linha2">
+        <div><label for="o-iss">ISS (%)</label><input id="o-iss" type="number" min="0" max="5" step="0.5" value="3"></div>
+        <div><label for="o-rat">RAT + terceiros (%)</label><input id="o-rat" type="number" min="0" max="15" step="0.1" value="8.8"></div>
+      </div>
+      <label class="check"><input id="o-dediss" type="checkbox" checked> Deduzir materiais da base do ISS (LC 116/2003, art. 7º, parágrafo 2º, I — conforme o município)</label>
+      <label class="check"><input id="o-cprb" type="checkbox" checked> Optante pela CPRB (desoneração da folha, em transição até 2027)</label>
+    </div>
+    <div class="grupo">
+      <h3>Alíquotas de referência</h3>
+      <div class="linha2">
+        <div><label for="o-cbsRef">CBS de referência (%)</label><input id="o-cbsRef" type="number" min="0" max="30" step="0.01" value="11.3"></div>
+        <div><label for="o-ibsRef">IBS de referência (%)</label><input id="o-ibsRef" type="number" min="0" max="30" step="0.01" value="18.7"></div>
+      </div>
+    </div>
+  </form>
+
+  <section>
+    <div class="anos" id="o-anos" role="group" aria-label="Ano da simulação"></div>
+    <div class="cartoes" id="o-cartoes"></div>
+    <div class="avisos" id="o-avisos"></div>
+    <div class="secao painel">
+      <h2 id="o-titulo-tabela">Tributos por regime</h2>
+      <div class="tabela-wrap"><table id="o-tabela"></table></div>
+    </div>
+    <div class="secao painel">
+      <h2>Carga anual por regime, 2026 a 2033</h2>
+      <div class="tabela-wrap" id="o-proj"></div>
+    </div>
+    <div class="secao">
+      <h2>Memória de cálculo do ano selecionado</h2>
+      <div id="o-memoria"></div>
+    </div>
+    <div class="secao">
+      <h2>Premissas do módulo</h2>
+      <details>
+        <summary>Como o módulo trabalha</summary>
+        <ul>
+          <li>RET (Lei 10.931/2004): 4% sobre a receita recebida (IRPJ 1,26%, CSLL 0,66%, PIS 0,37%, COFINS 1,71%), ou 1% no interesse social. A partir de 2027, PIS/COFINS dão lugar a 2,08% de CBS/IBS unificados (0,53% no interesse social), mantendo o total (LC 214/2025, art. 485, com a redação da LC 227/2026). Exige patrimônio de afetação e opção pelo RET efetivada até 31/12/2028.</li>
+          <li>Venda de imóveis no regime regular (Presumido e Real, a partir de 2027): CBS/IBS com redução de 50% (art. 261), devidos a cada recebimento (art. 262). Base = recebido − redutor de ajuste (terreno + obra incorrida até 2026, art. 258) − redutor social (R$ 100 mil por unidade residencial nova, R$ 30 mil por lote, art. 259). Crédito dos insumos da obra comprados a partir de 2027. A correção do redutor de ajuste pelo IPCA não está no cálculo.</li>
+          <li>Presumido de venda de imóveis: presunção de 8% (IRPJ) e 12% (CSLL), com o acréscimo da LC 224/2025 acima de R$ 5 milhões. Real: lucro = receita − terreno − obra − despesas − tributos sobre consumo.</li>
+          <li>Construtora: CBS/IBS com redução de 50% para a construção civil (arts. 252 e 261) e crédito dos materiais; presunção de 8%/12% na empreitada com material e de 32% só com mão de obra; ISS reduzido a 90/80/70/60% de 2029 a 2032 e extinto em 2033.</li>
+          <li>CPRB da construção civil: 4,5% da receita (Lei 12.546/2011). Transição da Lei 14.973/2024: 2026 = 60% da CPRB (2,7%) + 10% de CPP sobre a folha; 2027 = 40% (1,8%) + 15%; a partir de 2028, CPP cheia de 20%. RAT e terceiros continuam sobre a folha.</li>
+          <li>Simples (Anexo IV) calculado pelo motor geral: CPP fora do DAS e sem CPRB.</li>
+          <li>Não considera: retenções na fonte, ITBI, INSS da obra (aferição/CNO), regime de caixa × competência, permuta, loteamento pelo art. 486 e incorporação fora do patrimônio de afetação.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+</main>
+
 <footer>
   Estimativa para apoio ao estudo tributário; não substitui o parecer. Parâmetros conferidos em <span id="versao"></span>. Controller & Oraculu's — Rua Antônio Abude, 14, Jd. Barbosa, Guarulhos/SP · (11) 2087-6740 · www.controller-oraculus.com.br
 </footer>
@@ -237,6 +343,9 @@
 </script>
 <script>
 /*CNAE*/
+</script>
+<script>
+/*CONSTRUCAO*/
 </script>
 <script>
 (function () {
@@ -511,6 +620,102 @@
 
   aplicar(carregar());
   render();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const K = window.Construcao, M = window.Motor;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
+  const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 2}) + '%';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const CORES = {ret: '--s1', simples: '--s1', presumido: '--s3', real: '--s4'};
+  let ano = 2027;
+
+  // Abas
+  document.querySelectorAll('.abas button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.abas button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    $('aba-geral').hidden = b.dataset.aba !== 'geral';
+    $('aba-obra').hidden = b.dataset.aba !== 'obra';
+    if (b.dataset.aba === 'obra') render();
+  }));
+
+  M.PARAM.anos.forEach(a => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = a; b.dataset.ano = a;
+    b.addEventListener('click', () => { ano = a; render(); });
+    $('o-anos').appendChild(b);
+  });
+
+  function ler() {
+    const n = id => parseFloat($(id).value) || 0;
+    const tipo = $('o-tipo').value;
+    const base = {cbsRef: n('o-cbsRef') / 100, ibsRef: n('o-ibsRef') / 100};
+    if (tipo === 'incorporacao') return {tipo, e: Object.assign(base, {receita: n('o-receita-i'), terreno: n('o-terreno'), obra: n('o-obra'), obraAte2026: n('o-ate2026') / 100, obraCredito: n('o-credito') / 100, despesas: n('o-despesas'), unidades: n('o-unidades'), lotes: n('o-lotes'), social: $('o-social').checked})};
+    return {tipo, e: Object.assign(base, {receita: n('o-receita-c'), folha: n('o-folha'), margem: n('o-margem') / 100, comMaterial: $('o-commaterial').checked, material: n('o-material') / 100, iss: n('o-iss') / 100, ratTerceiros: n('o-rat') / 100, dedMaterialIss: $('o-dediss').checked, cprb: $('o-cprb').checked})};
+  }
+
+  function render() {
+    const {tipo, e} = ler();
+    document.querySelectorAll('#form-obra [data-tipo]').forEach(g => { g.hidden = g.dataset.tipo !== tipo; });
+    const proj = K.projecao(tipo, e);
+    const res = proj.find(p => p.ano === ano);
+    document.querySelectorAll('#o-anos button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ano === ano)));
+    const ordem = tipo === 'incorporacao' ? ['ret', 'presumido', 'real'] : ['simples', 'presumido', 'real'];
+    const eleg = ordem.filter(k => res.regimes[k] && res.regimes[k].elegivel);
+    const melhor = eleg.slice().sort((a, b) => res.regimes[a].total - res.regimes[b].total)[0];
+
+    $('o-cartoes').innerHTML = ordem.map(k => {
+      const r = res.regimes[k];
+      if (!r.elegivel) return '<div class="cartao ne"><div class="nome"><span class="ponto" style="background:var(' + CORES[k] + ')"></span>' + esc(r.nome) + '</div><div class="valor">Não se aplica</div><div class="sub">' + esc(r.motivo) + '</div></div>';
+      const top = k === melhor;
+      return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') +
+        '<div class="nome"><span class="ponto" style="background:var(' + CORES[k] + ')"></span>' + esc(r.nome) + '</div>' +
+        '<div class="valor">' + brl(r.total) + '</div><div class="sub">' + pct(r.efetiva) + ' da receita</div>' +
+        (top ? '' : '<div class="sub">+' + brl(r.total - res.regimes[melhor].total) + ' no ano</div>') + '</div>';
+    }).join('');
+    $('o-avisos').innerHTML = res.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+
+    $('o-titulo-tabela').textContent = 'Tributos por regime em ' + ano + ' (valores anuais)';
+    const nomes = [];
+    eleg.forEach(k => res.regimes[k].itens.forEach(i => { if (!nomes.includes(i.nome)) nomes.push(i.nome); }));
+    let h = '<thead><tr><th>Tributo</th>' + eleg.map(k => '<th>' + esc(res.regimes[k].nome) + '</th>').join('') + '</tr></thead><tbody>';
+    nomes.forEach(n => {
+      const info = eleg.some(k => (res.regimes[k].itens.find(i => i.nome === n) || {}).info);
+      h += '<tr' + (info ? ' class="info"' : '') + '><td>' + esc(n.trim()) + '</td>' + eleg.map(k => { const it = res.regimes[k].itens.find(i => i.nome === n); return '<td>' + (it ? brl(it.valor) : '—') + '</td>'; }).join('') + '</tr>';
+    });
+    h += '<tr class="total"><td>Total de tributos</td>' + eleg.map(k => '<td>' + brl(res.regimes[k].total) + '</td>').join('') + '</tr>';
+    h += '<tr><td>Carga sobre a receita</td>' + eleg.map(k => '<td>' + pct(res.regimes[k].efetiva) + '</td>').join('') + '</tr>';
+    h += '<tr><td>Lucro depois dos tributos</td>' + eleg.map(k => '<td>' + brl(res.regimes[k].sobra) + '</td>').join('') + '</tr>';
+    h += '<tr><td>Crédito de CBS/IBS para o comprador</td>' + eleg.map(k => '<td>' + (ano >= 2027 ? brl(res.regimes[k].credito) : '—') + '</td>').join('') + '</tr></tbody>';
+    $('o-tabela').innerHTML = h;
+
+    let p = '<table><thead><tr><th>Regime</th>' + M.PARAM.anos.map(a => '<th>' + a + '</th>').join('') + '</tr></thead><tbody>';
+    ordem.forEach(k => { p += '<tr><td>' + esc(proj[0].regimes[k].nome) + '</td>' + proj.map(x => { const r = x.regimes[k]; return '<td' + (x.ano === ano ? ' style="font-weight:bold"' : '') + '>' + (r.elegivel ? brl(r.total) : '—') + '</td>'; }).join('') + '</tr>'; });
+    $('o-proj').innerHTML = p + '</tbody></table>';
+
+    $('o-memoria').innerHTML = eleg.map(k => { const r = res.regimes[k]; return '<details><summary>' + esc(r.nome) + '</summary><ul>' + (r.memoria || []).map(m => '<li>' + esc(m.texto) + (m.valor !== null && m.valor !== undefined ? ': <b>' + brl(m.valor) + '</b>' : '') + '</li>').join('') + '</ul></details>'; }).join('');
+    try { const v = {}; document.querySelectorAll('#form-obra input, #form-obra select').forEach(i => { v[i.id] = i.type === 'checkbox' ? i.checked : i.value; }); localStorage.setItem('co-calc-obra', JSON.stringify(v)); } catch (err) {}
+  }
+  try { const s = JSON.parse(localStorage.getItem('co-calc-obra') || 'null'); if (s) Object.entries(s).forEach(([id, v]) => { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = v; else el.value = v; } }); } catch (err) {}
+  $('form-obra').addEventListener('input', render);
+  $('form-obra').addEventListener('change', render);
+  $('form-obra').addEventListener('submit', ev => ev.preventDefault());
+
+  // CNAE de construção/incorporação na aba geral leva ao módulo
+  const geral = document.getElementById('atividade');
+  function sugerir() {
+    const v = geral.value, aviso = document.getElementById('aviso-obra');
+    const mostra = ['construcao', 'incorporacao'].includes(v) || (v === 'servicos4' && /^4[1-3]/.test((document.getElementById('cnae').value || '').replace(/\D/g, '')));
+    if (aviso) aviso.hidden = !mostra;
+  }
+  geral.addEventListener('change', sugerir);
+  document.getElementById('aplicar-cnae').addEventListener('click', () => setTimeout(sugerir, 50));
+  document.getElementById('buscar').addEventListener('click', () => setTimeout(sugerir, 3000));
+  const ir = document.getElementById('ir-obra');
+  if (ir) ir.addEventListener('click', () => { if (geral.value === 'incorporacao') $('o-tipo').value = 'incorporacao'; else $('o-tipo').value = 'construtora'; document.querySelector('.abas button[data-aba="obra"]').click(); });
+  sugerir();
 })();
 </script>
 </body>

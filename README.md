@@ -9,6 +9,11 @@ Ferramenta do Departamento Societário e de Legalização da Controller & Oracul
 
 Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o crédito de CBS/IBS que cada regime gera para o cliente do contribuinte.
 
+## Aba Construção e Incorporação
+
+- Incorporação / venda de unidades: RET 4% (ou 1% no interesse social) e o RET de transição a partir de 2027 (IRPJ 1,26% + CSLL 0,66% + CBS/IBS 2,08%; LC 214/2025, art. 485, redação da LC 227/2026), comparado com Presumido (presunção 8%/12%) e Real, com CBS/IBS reduzidos em 50% (art. 261), redutor de ajuste (art. 258), redutor social (art. 259) e crédito dos insumos da obra.
+- Construtora (empreitada): CPP × CPRB na transição da Lei 14.973/2024 (2026: 2,7% da receita + 10% da folha; 2027: 1,8% + 15%; 2028: CPP cheia), CBS/IBS com redução de 50% e crédito dos materiais, ISS com dedução de materiais, presunção 8%/12% ou 32%, e Simples Anexo IV.
+
 ## Consulta por CNPJ
 
 Informe o CNPJ e clique em Buscar: a página consulta a base pública da Receita Federal (BrasilAPI, com a publica.cnpj.ws como reserva), traz razão social, situação, regime atual, CNAE principal e secundários, e já preenche a atividade, o anexo do Simples, o Fator R e a redução de CBS/IBS sugerida. Sem internet, ou num ambiente que bloqueie a consulta, basta digitar o CNAE principal.
@@ -24,14 +29,15 @@ index.html          página pronta (gerada; é o arquivo publicado)
 template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
 cnae.js             enquadramento por CNAE e consulta de CNPJ
-build.py            embute motor.js e cnae.js em template.html e gera index.html
-testes/             node testes/motor.test.js e node testes/cnae.test.js
+construcao.js       módulo de construção e incorporação (RET, CPRB, redutores)
+build.py            embute motor.js, cnae.js e construcao.js em template.html e gera index.html
+testes/             node testes/motor.test.js, cnae.test.js e construcao.test.js
 ```
 
 ## Como alterar
 
 1. Edite `motor.js` (parâmetros e regras) ou `template.html` (tela).
-2. Rode `node testes/motor.test.js` e `node testes/cnae.test.js`.
+2. Rode os três testes em `testes/`.
 3. Rode `python3 build.py` para gerar o `index.html`.
 
 ## Parâmetros (conferidos em 05/11/2026)

@@ -2,5 +2,6 @@
 t = open('template.html', encoding='utf-8').read()
 m = open('motor.js', encoding='utf-8').read()
 c = open('cnae.js', encoding='utf-8').read()
-open('index.html', 'w', encoding='utf-8').write(t.replace('/*MOTOR*/', m).replace('/*CNAE*/', c))
+k = open('construcao.js', encoding='utf-8').read()
+open('index.html', 'w', encoding='utf-8').write(t.replace('/*MOTOR*/', m).replace('/*CNAE*/', c).replace('/*CONSTRUCAO*/', k))
 print('index.html gerado')
