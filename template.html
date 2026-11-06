@@ -386,6 +386,12 @@
         <option value="estoque">No estoque — atividade imobiliária (presunção 8%/12%)</option>
         <option value="ativo">No ativo não circulante — imobilizado, investimento ou aluguel (ganho de capital)</option>
       </select>
+      <div class="linha2">
+        <div><label for="v-vista">PF: % do preço recebido no mês da venda</label><input id="v-vista" type="number" min="0" max="100" step="5" value="100"></div>
+        <div><label for="v-prej">PJ Real: prejuízo fiscal a compensar (R$)</label><input id="v-prej" type="number" min="0" step="1000" value="0"></div>
+      </div>
+      <label for="v-mun">ITBI do comprador (informativo)</label>
+      <select id="v-mun"><option value="">Não calcular</option></select>
       <label class="check"><input id="v-trim" type="checkbox" checked> Venda concentrada num único trimestre (adicional de IRPJ acima de R$ 60 mil)</label>
       <label class="check"><input id="v-dist" type="checkbox" checked> Distribuir o lucro aos sócios no mês (IRRF de 10% — Lei 15.270/2025)</label>
       <label class="check"><input id="v-comtrib" type="checkbox"> O preço já inclui a CBS/IBS (tributo extraído do preço)</label>
@@ -412,7 +418,8 @@
         <li>PJ no estoque: Presumido com 8%/12% sobre a receita e, até 2026, PIS/COFINS de 3,65%; Real sobre o lucro da venda. PJ com imóvel no ativo: IRPJ e CSLL sobre o ganho de capital e, até 2026, sem PIS/COFINS (Lei 9.718/1998, art. 3º, parágrafo 2º, IV).</li>
         <li>A partir de 2027 (PJ e PF contribuinte): CBS/IBS com redução de 50%, redutor de ajuste (custo × IPCA mensal desde a aquisição, ou valor de referência), redutor social de R$ 100 mil por residencial novo e R$ 30 mil por lote corrigidos pelo IPCA, e dedução do art. 488 no IBS a partir de 2029.</li>
         <li>IPCA mensal oficial do IBGE (série 433 do Banco Central), publicado até <span id="v-ipca"></span>.</li>
-        <li>Não considera: ITBI do comprador, corretagem e outras despesas da venda, prejuízos fiscais da PJ, permuta, venda a prazo (o IR da PF pode ser pago por parcela) e a trava do art. 258, parágrafo 5º.</li>
+        <li>Corretagem paga pelo vendedor: reduz o valor de alienação da PF (IN SRF 84/2001, art. 19, parágrafo 4º) e é despesa no Lucro Real. Venda a prazo da PF: IR proporcional ao recebido (art. 31). Prejuízo fiscal no Real: até 30% do lucro (Lei 9.065/1995). ITBI do comprador: informativo, pelo valor declarado.</li>
+        <li>Não considera: permuta, outras despesas da venda, crédito de CBS/IBS sobre a corretagem e a trava do art. 258, parágrafo 5º.</li>
       </ul></details>
     </div>
   </section>
@@ -949,6 +956,7 @@
   const pct = v => ((v || 0) * 100).toFixed(2).replace('.', ',') + '%';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   $('v-ipca').textContent = IP.ultimoRotulo;
+  Object.entries(window.ITBI.MUNICIPIOS).filter(([k]) => k !== 'outro').forEach(([k, m]) => { const o = document.createElement('option'); o.value = k; o.textContent = m.nome; $('v-mun').appendChild(o); });
   const campo = (cls, rot, tipo, val, extra) => '<div><label>' + rot + '</label><input class="' + cls + '" type="' + tipo + '" ' + (extra || 'min="0" step="1000"') + ' value="' + esc(val) + '"></div>';
   function linha(v) {
     v = v || {};
@@ -959,6 +967,7 @@
       '<div><label>Tipo</label><select class="vi-tipo"><option value="novo">Residencial novo</option><option value="usado">Residencial usado</option><option value="lote">Lote residencial</option><option value="comercial">Comercial / outro</option></select></div></div>' +
       '<div class="linha2">' + campo('vi-cont', 'Custo contábil (PJ ativo)', 'number', v.contabil == null ? '' : v.contabil) + campo('vi-ref', 'Valor de referência (opcional)', 'number', v.valorReferencia || 0) + '</div>' +
       '<div class="linha2">' + campo('vi-488', 'Custos 2027–2032 c/ ICMS/ISS', 'number', v.ded488 || 0) + campo('vi-rein', 'PF: % reinvestido em 180 dias', 'number', v.reinvest || 0, 'min="0" max="100" step="5"') + '</div>' +
+      '<div class="linha2">' + campo('vi-corr', 'Corretagem paga pelo vendedor', 'number', v.corretagem || 0) + '<div></div></div>' +
       '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
     d.querySelector('.vi-tipo').value = v.tipo || 'usado';
     d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
@@ -970,7 +979,8 @@
     const n = id => parseFloat($(id).value) || 0;
     return {venda: $('v-data').value || '2027-06', socios: n('v-socios'), cbsRef: n('v-cbs') / 100, ibsRef: n('v-ibs') / 100, classificacao: $('v-class').value,
       trimestral: $('v-trim').checked, distribuir: $('v-dist').checked, precoComTributo: $('v-comtrib').checked, pfContribuinte: $('v-pfcontrib').checked, unico440: $('v-unico').checked,
-      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100}; })};
+      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100, corretagem: +q('.vi-corr') || 0}; }),
+      fracaoVista: $('v-vista').value === '' ? 1 : n('v-vista') / 100, prejuizo: n('v-prej'), municipio: $('v-mun').value};
   }
   function render() {
     const e = ler(), r = V.calcular(e), C = r.cenarios, ks = ['pf', 'presumido', 'real'];
@@ -984,7 +994,9 @@
     nomes.forEach(n => { h += '<tr><td>' + esc(n) + '</td>' + ks.map(k => { const it = C[k].itens.find(i => i.nome === n); return '<td>' + (it ? brl(it.valor) : '—') + '</td>'; }).join('') + '</tr>'; });
     h += '<tr class="total"><td>Tributos da venda</td>' + ks.map(k => '<td>' + brl(C[k].total) + '</td>').join('') + '</tr>';
     if (e.distribuir) h += '<tr><td>IRRF na distribuição de lucros</td>' + ks.map(k => '<td>' + (C[k].irrf ? brl(C[k].irrf) : '—') + '</td>').join('') + '</tr><tr class="total"><td>Total com a distribuição</td>' + ks.map(k => '<td>' + brl(C[k].totalComIrrf) + '</td>').join('') + '</tr>';
-    h += '<tr><td>Fica com o vendedor (após tributos)</td>' + ks.map(k => '<td>' + brl(C[k].liquido) + '</td>').join('') + '</tr></tbody>';
+    if (C.pf.irMesVenda < C.pf.itens[0].valor - 0.005) h += '<tr><td>PF: IR que vence no mês seguinte à venda (restante diferido)</td><td>' + brl(C.pf.irMesVenda) + '</td><td>—</td><td>—</td></tr>';
+    if (e.municipio) { const it = r.porImovel.reduce((s, l) => s + window.ITBI.compra({municipio: e.municipio, valorDeclarado: l.valor, financiadoSfh: 0, valorReferencia: 0}).devido.total, 0); h += '<tr class="info"><td>ITBI pago pelo comprador (' + esc(window.ITBI.MUNICIPIOS[e.municipio].nome) + ', valor declarado, sem SFH)</td>' + ks.map(() => '<td>' + brl(it) + '</td>').join('') + '</tr>'; }
+    h += '<tr><td>Fica com o vendedor (após tributos e corretagem)</td>' + ks.map(k => '<td>' + brl(C[k].liquido) + '</td>').join('') + '</tr></tbody>';
     $('v-tabela').innerHTML = h;
     const ref = r.ano >= 2027;
     $('v-porimovel').innerHTML = '<thead><tr><th>Imóvel</th><th>Venda</th><th>Ganho PF</th><th>Base PF (após fatores)</th><th>IR PF</th>' + (ref ? '<th>Redutor de ajuste</th><th>Redutor social</th><th>Base CBS/IBS</th><th>CBS+IBS</th>' : '') + '</tr></thead><tbody>' +

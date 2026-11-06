@@ -38,3 +38,18 @@ ok(ibs(c29) < ibs(c29s) && Math.abs(cbs(c29) - cbs(c29s)) < .01, 'art. 488 reduz
 // IRRF: até R$ 50 mil por sócio não retém
 ok(V.calcular(Object.assign({}, base, {socios: 20})).cenarios.presumido.irrf === 0, 'IRRF abaixo de 50 mil por sócio');
 console.log('VENDA OK');
+
+// --- Corretagem, venda a prazo e prejuízo fiscal (06/11/2026) ---
+{
+  const b2 = Object.assign({}, base, {imoveis: [Object.assign({}, base.imoveis[0], {corretagem: 60000})]});
+  const r2 = V.calcular(b2);
+  perto(r2.porImovel[0].ganhoPF, 540000, .01, 'corretagem reduz o ganho da PF');
+  ok(r2.cenarios.presumido.itens.find(i => i.nome === 'IRPJ').valor === 12000, 'corretagem não deduz no Presumido');
+  ok(r2.cenarios.real.total < r.cenarios.real.total, 'corretagem deduz no Real');
+  const r3 = V.calcular(Object.assign({}, base, {fracaoVista: .25}));
+  perto(r3.cenarios.pf.irMesVenda, 54417.71 * .25, .01, 'IR proporcional na venda a prazo');
+  const r4 = V.calcular(Object.assign({}, base, {prejuizo: 1e6}));
+  const lr = r.cenarios.real.itens.find(i => i.nome === 'IRPJ').valor, lr4 = r4.cenarios.real.itens.find(i => i.nome === 'IRPJ').valor;
+  perto(lr4, lr * .7, .01, 'prejuízo limitado a 30% do lucro');
+  console.log('VENDA (corretagem/prazo/prejuízo) OK');
+}

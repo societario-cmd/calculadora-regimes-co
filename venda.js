@@ -85,7 +85,7 @@
   }
 
   // e: {venda 'AAAA-MM', imoveis:[{descricao, valor, custo, aquisicao 'AAAA-MM', tipo 'novo'|'usado'|'lote'|'comercial', contabil, valorReferencia, ded488, reinvest (0–1)}],
-  //     cbsRef, ibsRef (frações), classificacao 'estoque'|'ativo', trimestral, socios, distribuir, pfContribuinte, unico440, precoComTributo}
+  //     corretagem por imóvel; fracaoVista (0–1, PF a prazo); prejuizo (R$, Lucro Real); cbsRef, ibsRef (frações), classificacao 'estoque'|'ativo', trimestral, socios, distribuir, pfContribuinte, unico440, precoComTributo}
   function calcular(e) {
     const ano = +String(e.venda).slice(0, 4);
     const ali = M.aliquotas(ano, +e.cbsRef, +e.ibsRef);
@@ -105,7 +105,8 @@
       const itens = [], mem = [];
       let ir = 0;
       ims.forEach((im, k) => {
-        const ganho = Math.max(0, (+im.valor || 0) - (+im.custo || 0));
+        const corr = Math.max(0, +im.corretagem || 0);
+        const ganho = Math.max(0, (+im.valor || 0) - corr - (+im.custo || 0)); // corretagem paga pelo vendedor reduz o valor de alienação (IN SRF 84/2001, art. 19, parágrafo 4º)
         const f = fatoresPF(im.aquisicao, e.venda);
         let base = ganho * (1 - f.red7713) * f.fr1 * f.fr2;
         const residencial = im.tipo === 'novo' || im.tipo === 'usado';
@@ -115,7 +116,7 @@
         const imp = impostoGC(base);
         ir += imp;
         out.porImovel[k] = {descricao: im.descricao, valor: +im.valor || 0, ganhoPF: ganho, basePF: base, irPF: imp};
-        mem.push(memo(im.descricao + ' — ganho de capital (venda − custo)', ganho));
+        mem.push(memo(im.descricao + ' — ganho de capital (venda' + (corr ? ' − corretagem' : '') + ' − custo)', ganho));
         if (f.red7713) mem.push(memo('Redução da Lei 7.713/1988, art. 18 (aquisição em ' + String(im.aquisicao).slice(0, 4) + '): ' + Math.round(f.red7713 * 100) + '%', null));
         mem.push(memo('FR1 = 1/1,0060^' + f.m1 + ' = ' + f.fr1.toFixed(6).replace('.', ',') + '; FR2 = 1/1,0035^' + f.m2 + ' = ' + f.fr2.toFixed(6).replace('.', ',') + ' (Lei 11.196/2005, art. 40)', null));
         if (isentoUnico) mem.push(memo('Isento: único imóvel, venda até R$ 440 mil (Lei 9.250/1995, art. 23)', null));
@@ -123,17 +124,21 @@
         mem.push(memo(im.descricao + ' — base tributável e IR (15% a 22,5%)', base), memo('IR sobre ganho de capital', imp));
       });
       itens.push({nome: 'IR sobre ganho de capital (PF)', valor: ir});
+      const vista = e.fracaoVista == null || e.fracaoVista === '' ? 1 : Math.min(1, Math.max(0, +e.fracaoVista));
+      if (vista < 1) mem.push(memo('Venda a prazo: IR proporcional ao recebido; no mês da venda (' + Math.round(vista * 100) + '% do preço) vence', ir * vista), memo('IR diferido, pago no mês seguinte a cada parcela recebida (IN SRF 84/2001, art. 31)', ir * (1 - vista)));
       let cons = 0;
       if (reforma && e.pfContribuinte) {
         itens.push({nome: 'CBS', valor: cbsT}, {nome: 'IBS', valor: ibsT}); cons = cbsT + ibsT;
         cbsI.forEach(c => { mem.push(...c.memoria); });
       }
-      out.cenarios.pf = {nome: 'Pessoa física', itens, total: ir + cons, irrf: 0, totalComIrrf: ir + cons, liquido: Rt - ir - (e.precoComTributo ? cons : 0), memoria: mem};
+      out.cenarios.pf = {nome: 'Pessoa física', itens, irMesVenda: ir * vista, total: ir + cons, irrf: 0, totalComIrrf: ir + cons, liquido: Rt - ims.reduce((a, i) => a + Math.max(0, +i.corretagem || 0), 0) - ir - (e.precoComTributo ? cons : 0), memoria: mem};
       if (reforma && !e.pfContribuinte) out.avisos.push('Pessoa física sem CBS/IBS: só vira contribuinte se, no ano anterior, vendeu mais de 3 imóveis ou mais de 1 imóvel construído por ela nos 5 anos anteriores, ou se passar desses limites no próprio ano (LC 214, art. 251). Marque a opção se for o caso.');
     }
 
     /* ---------- Pessoa jurídica ---------- */
     const ativo = e.classificacao === 'ativo';
+    const corrT = ims.reduce((s, i) => s + Math.max(0, +i.corretagem || 0), 0);
+    const prejuizo = Math.max(0, +e.prejuizo || 0);
     const contabilT = ims.reduce((s, i) => s + (i.contabil != null && i.contabil !== '' ? +i.contabil : (+i.custo || 0)), 0);
     const meses = out.meses;
     const montarPJ = (regime) => {
@@ -155,7 +160,7 @@
       // IRPJ/CSLL
       let baseIR, baseCS, descr;
       if (ativo) {
-        const ganho = Math.max(0, recLiq - contabilT);
+        const ganho = Math.max(0, recLiq - contabilT - (regime === 'real' ? corrT : 0));
         baseIR = baseCS = ganho;
         descr = 'Ganho de capital = receita − custo contábil (' + (regime === 'presumido' ? 'Lei 9.430/1996, art. 25, II, e art. 29; IN RFB 1.700/2017, art. 215, parágrafo 14' : 'compõe o lucro real') + ')';
       } else if (regime === 'presumido') {
@@ -165,8 +170,14 @@
         if (q.aplicou) out.avisos.push('Receita acima de R$ 5 milhões no ano: aplicado o acréscimo de presunção da LC 224/2025 (em discussão no STF).');
       } else {
         const pc = reforma ? 0 : consumo;
-        baseIR = baseCS = Math.max(0, recLiq - custoT - pc);
-        descr = 'Lucro real = receita − custo do imóvel' + (reforma ? '' : ' − PIS/COFINS') + ' (sem outras despesas ou prejuízos)';
+        baseIR = baseCS = Math.max(0, recLiq - custoT - pc - corrT);
+        descr = 'Lucro real = receita − custo do imóvel' + (corrT ? ' − corretagem' : '') + (reforma ? '' : ' − PIS/COFINS');
+      }
+      if (regime === 'real' && prejuizo > 0) {
+        const comp = Math.min(prejuizo, .3 * baseIR);
+        mem.push(memo('Compensação de prejuízo fiscal e base negativa até 30% do lucro (Lei 9.065/1995, arts. 15 e 16)', -comp));
+        baseIR -= comp; baseCS -= Math.min(prejuizo, comp);
+        if (ativo) out.avisos.push('Lucro Real com venda do ativo: no IRPJ, prejuízo não operacional só compensa lucro da mesma natureza (Lei 12.973/2014, art. 43; IN RFB 1.700/2017, art. 205); a CSLL não tem essa restrição. Confira a natureza do prejuízo informado.');
       }
       const t = irpjCsll(baseIR, baseCS, meses);
       mem.unshift(memo(descr, baseIR));
@@ -174,13 +185,13 @@
       itens.unshift({nome: 'IRPJ', valor: t.irpj}, {nome: 'Adicional de IRPJ', valor: t.adic}, {nome: 'CSLL', valor: t.csll});
       const total = itens.reduce((s, i) => s + i.valor, 0);
       // Distribuição aos sócios (Lei 15.270/2025)
-      const lucroDistr = Math.max(0, recLiq - custoT - (total - (reforma ? consumo : 0)));
+      const lucroDistr = Math.max(0, recLiq - custoT - corrT - (total - (reforma ? consumo : 0)));
       const socios = Math.max(1, Math.round(+e.socios || 1));
       const porSocio = lucroDistr / socios;
       const irrf = e.distribuir && porSocio > PV.irrfLucros.limiteMes ? lucroDistr * PV.irrfLucros.aliquota : 0;
       if (e.distribuir) mem.push(memo('Lucro distribuído no mês (receita − custo − tributos), ' + socios + ' sócio(s): ' + (porSocio > PV.irrfLucros.limiteMes ? 'acima de R$ 50 mil por sócio, IRRF de 10% sobre o total' : 'até R$ 50 mil por sócio, sem IRRF') + ' (Lei 9.250/1995, art. 6º-A)', irrf));
       return {nome: (regime === 'presumido' ? 'PJ — Lucro Presumido' : 'PJ — Lucro Real') + (ativo ? ' (ativo não circulante)' : ' (estoque)'), itens, total, irrf, totalComIrrf: total + irrf,
-        liquido: Rt - total - irrf + (reforma && !e.precoComTributo ? consumo : 0), lucroDistr, memoria: mem};
+        liquido: Rt - corrT - total - irrf + (reforma && !e.precoComTributo ? consumo : 0), lucroDistr, memoria: mem};
     };
     out.cenarios.presumido = montarPJ('presumido');
     out.cenarios.real = montarPJ('real');
@@ -190,6 +201,7 @@
     if (reforma && ativo) out.avisos.push('Desde 2027 a venda de imóvel do ativo imobilizado ou de investimento da PJ do regime regular também tem CBS/IBS, com redutor de ajuste; a exclusão do PIS/COFINS não se repete na LC 214.');
     if (reforma && idx(e.venda) > IP.ultimo) out.avisos.push('IPCA publicado até ' + IP.ultimoRotulo + '; os meses seguintes entram como 0% até a divulgação (o redutor real será um pouco maior).');
     if (ims.some(i => idx(i.aquisicao) >= idx('2027-01'))) out.avisos.push('Imóvel adquirido a partir de 2027: o redutor de ajuste é o valor da aquisição corrigido (art. 258, III), limitado nas revendas em menos de 3 anos sem comprovação de IR/ITBI (art. 258, parágrafo 5º).');
+    if (corrT) out.avisos.push('Corretagem: reduz o ganho da PF e é despesa no Lucro Real; no Presumido não é dedutível. A partir de 2027, a CBS/IBS cobrada na corretagem dá crédito à PJ contribuinte (não considerado aqui).');
     if (e.distribuir) out.avisos.push('O IRRF de 10% sobre lucros é antecipação do imposto mínimo anual (IRPFM) do sócio; distribuições até R$ 50 mil por mês por sócio não têm retenção. Na PF a comparação considera só o IR de ganho de capital.');
     out.receita = Rt; out.custo = custoT;
     return out;
