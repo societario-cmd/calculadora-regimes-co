@@ -61,3 +61,8 @@ As premissas completas estão na própria página, na seção "Premissas".
 ## Aviso
 
 Estimativa para apoio ao estudo tributário. Não substitui o parecer nem a análise do caso concreto. Teses que dependem de medida judicial exigem advogado habilitado.
+
+### Atualização 05/11/2026 — conferência com calculadora imobiliária de mercado
+- Loteamento com registro pedido até 31/12/2028: comparação com a opção de IBS+CBS de 3,65% da receita bruta, sem créditos e sem redutores (LC 214/2025, art. 486; Res. CGIBS 6/2026, art. 462).
+- Redutor social editável com o valor do mês, atualizado pelo IPCA (LC 214/2025, art. 259, § 3º).
+- Opção de preço sem CBS/IBS embutido (tributo por fora, LC 214/2025, art. 12, § 2º).

@@ -265,7 +265,7 @@
         <div><label for="o-credito">Insumos com crédito (%)</label><input id="o-credito" type="number" min="0" max="100" step="5" value="70"></div>
       </div>
       <div class="dica">A obra até 2026 entra no redutor de ajuste; a partir de 2027 os insumos comprados de fornecedores do regime regular geram crédito.</div>
-      <label for="o-ipca">IPCA acumulado da aquisição até a venda (%)</label>
+      <label for="o-ipca">IPCA acumulado da aquisição até a venda (%) — atualização até 31/12/2026 e, depois, até o fato gerador (LC 214, arts. 257 e 258, § 4º)</label>
       <input id="o-ipca" type="number" min="0" max="200" step="0.5" value="0">
       <div class="dica">Corrige o redutor de ajuste (LC 214, art. 258).</div>
       <label for="o-despesas">Outras despesas (comercial, administrativo) (R$)</label>
@@ -273,9 +273,13 @@
       <div class="linha2">
         <div><label for="o-unidades">Unidades residenciais novas vendidas</label><input id="o-unidades" type="number" min="0" step="1" value="20"></div>
         <div><label for="o-lotes">Lotes residenciais vendidos</label><input id="o-lotes" type="number" min="0" step="1" value="0"></div>
+        <div><label for="o-rsun">Redutor social por imóvel novo (R$, valor do mês — art. 259, § 3º)</label><input id="o-rsun" type="number" min="0" step="0.01" value="108211.06"></div>
+        <div><label for="o-rslote">Redutor social por lote (R$, valor do mês)</label><input id="o-rslote" type="number" min="0" step="0.01" value="32463.32"></div>
       </div>
       <div class="dica">Redutor social de R$ 100 mil por unidade e R$ 30 mil por lote (LC 214, art. 259).</div>
       <label class="check"><input id="o-social" type="checkbox"> Empreendimento de interesse social (RET 1% / 0,53% de CBS/IBS)</label>
+ <label class="check"><input id="o-semtrib" type="checkbox"> A receita/preço informado não inclui CBS/IBS (tributo cobrado por fora, além do preço)</label>
+      <label class="check"><input id="o-loteamento" type="checkbox"> Loteamento com registro pedido até 31/12/2028 — comparar com a opção de 3,65% (LC 214, art. 486)</label>
     </div>
     <div class="grupo" data-tipo="incorporacao">
       <h3>INSS da obra — aferição no Sero (opcional)</h3>
@@ -355,7 +359,7 @@
           <li>Simples (Anexo IV) calculado pelo motor geral: CPP fora do DAS e sem CPRB.</li>
           <li>INSS da obra (IN RFB 2.021/2021): RMT = área × equivalência × VAU × 20% (alvenaria), 15% (madeira ou mista) ou 12% (interesse social); sobre a diferença entre a RMT e a remuneração comprovada incide a alíquota informada (padrão 36,8%). Não aplica decadência, fator social de pessoa física nem a redução de 70% de pré-moldados.</li>
           <li>Retenções da construtora: INSS de 11% (3,5% para optante da CPRB até 2027) sobre a nota menos os materiais, e ISS retido. São antecipação, não custo.</li>
-          <li>Não considera: ITBI, regime de caixa × competência, permuta, loteamento pelo art. 486 e incorporação fora do patrimônio de afetação.</li>
+          <li>Não considera: ITBI, regime de caixa × competência, permuta e incorporação fora do patrimônio de afetação.</li>
         </ul>
       </details>
     </div>
@@ -888,8 +892,13 @@
       social: {irpj: .0031, csll: .0016, pis: .0007, cofins: .0046, cbsIbs: .0053}
     },
     reducaoImoveis: .5,            // LC 214/2025, art. 261
-    redutorSocialUnidade: 100000,  // LC 214/2025, art. 259 (imóvel residencial novo)
+    // Redutor social: R$ 100 mil por imóvel residencial novo e R$ 30 mil por lote (LC 214/2025, art. 259),
+    // atualizados mensalmente pelo IPCA desde a publicação da LC (art. 259, § 3º). Valor nominal aqui; o valor do mês entra pela tela.
+    redutorSocialUnidade: 100000,
     redutorSocialLote: 30000,
+    // Parcelamento do solo com pedido de registro (Lei 6.766/1979) antes de 01/01/2029: opção por IBS+CBS de 3,65% da receita
+    // bruta recebida, sem créditos e sem redutores de ajuste e social (LC 214/2025, art. 486; Res. CGIBS 6/2026, art. 462)
+    loteamento486: .0365,
     // CPRB construção civil: 4,5% da receita (Lei 12.546/2011, art. 7º, IV); transição da Lei 14.973/2024
     cprb: {aliquota: .045, fatorReceita: {2026: .6, 2027: .4}, cppFolha: {2026: .10, 2027: .15}},
     // Aferição indireta da obra (IN RFB 2.021/2021, art. 25): RMT = área × % equivalência × VAU × % por tipo
@@ -943,10 +952,13 @@
     if (ano >= 2027) {
       const tVenda = tCheia * (1 - PC.reducaoImoveis);
       const redAjuste = (terreno + obra * (+e.obraAte2026 || 0)) * (1 + Math.max(0, +e.ipca || 0)); // atualizado pelo IPCA (art. 258)
-      const redSocial = (Math.max(0, +e.unidades || 0) * PC.redutorSocialUnidade) + (Math.max(0, +e.lotes || 0) * PC.redutorSocialLote);
+      const vUn = +e.redSocialUnidade > 0 ? +e.redSocialUnidade : PC.redutorSocialUnidade;
+      const vLote = +e.redSocialLote > 0 ? +e.redSocialLote : PC.redutorSocialLote;
+      const redSocial = (Math.max(0, +e.unidades || 0) * vUn) + (Math.max(0, +e.lotes || 0) * vLote);
       const base0 = Math.max(0, R - redAjuste);
       const base = Math.max(0, base0 - redSocial);
-      const deb = tVenda * base / (1 + tVenda);
+      // CBS/IBS são "por fora" (LC 214, art. 12, § 2º, I). Se a receita informada já embute o tributo, extrai-se por dentro.
+      const deb = e.precoSemTributo ? tVenda * base : tVenda * base / (1 + tVenda);
       const obraNova = obra * (1 - (+e.obraAte2026 || 0)) * (+e.obraCredito || 0);
       const cred = tCheia * obraNova / (1 + tCheia);
       const liq = Math.max(0, deb - cred);
@@ -956,7 +968,7 @@
 
     // Presumido
     {
-      const recBruta = reg ? R - reg.deb : R;
+      const recBruta = reg && !e.precoSemTributo ? R - reg.deb : R;
       const q = lc224(recBruta, PC.presuncao.imoveis.ir, PC.presuncao.imoveis.cs, ano);
       const {irpj, csll} = irpjCsll(recBruta * q.pIR, recBruta * q.pCS);
       const itens = [{nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll}];
@@ -982,6 +994,18 @@
         memoria: [memo('Lucro antes dos tributos = receita − terreno − obra − despesas', lucroAntes), memo('Lucro real', lucro)].concat(reg ? memRegular(reg) : [])};
     }
 
+    // Loteamento: regime de transição do art. 486 (alternativa ao regime regular, a partir de 2027)
+    if (ano >= 2027 && e.loteamento) {
+      const q = lc224(R, PC.presuncao.imoveis.ir, PC.presuncao.imoveis.cs, ano);
+      const {irpj, csll} = irpjCsll(R * q.pIR, R * q.pCS);
+      const cbsIbs = R * PC.loteamento486;
+      out.regimes.lote = {nome: 'Loteamento art. 486 (Presumido)', elegivel: true,
+        itens: [{nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll}, {nome: 'CBS/IBS 3,65% (art. 486)', valor: cbsIbs}],
+        total: irpj + csll + cbsIbs, credito: 0,
+        memoria: [memo('CBS/IBS de 3,65% sobre a receita bruta recebida, sem créditos e sem redutores (LC 214, art. 486)', cbsIbs),
+          memo('IRPJ/CSLL pelo Presumido sobre a receita', irpj + csll)]};
+      out.avisos.push('Loteamento (art. 486): exige pedido de registro do parcelamento até 31/12/2028; afasta o redutor de ajuste e o redutor social, e o comprador contribuinte não toma crédito.');
+    }
     if (reg && reg.saldoCredor > 0) out.avisos.push('No regime regular, os créditos da obra superam o débito de CBS/IBS do ano: há saldo credor a compensar ou ressarcir.');
     if (ano >= 2027) out.avisos.push('RET de transição (LC 214, art. 485): exige patrimônio de afetação e opção pelo RET efetivada até 31/12/2028. Quem compra imóvel de incorporação no RET não toma crédito de CBS/IBS.');
     if (ano === 2026) out.avisos.push('Em 2026 a CBS (0,9%) e o IBS (0,1%) são de teste e compensados: o cálculo usa PIS/COFINS. Veja 2027 para a reforma.');
@@ -1048,7 +1072,8 @@
     if (ano >= 2027) {
       const tVenda = tCheia * (1 - PC.reducaoImoveis);
       const base = Math.max(0, R - R * (+e.iss || 0) * fL);
-      const deb = tVenda * base / (1 + tVenda);
+      // CBS/IBS são "por fora" (LC 214, art. 12, § 2º, I). Se a receita informada já embute o tributo, extrai-se por dentro.
+      const deb = e.precoSemTributo ? tVenda * base : tVenda * base / (1 + tVenda);
       const cred = e.comMaterial ? tCheia * mat / (1 + tCheia) : 0;
       const liq = Math.max(0, deb - cred);
       const pCbs = tCheia ? ali.cbs / tCheia : 0;
@@ -1067,7 +1092,7 @@
       itens.push({nome: e.cprb && ano < 2028 ? 'CPRB + CPP (transição)' : 'CPP + encargos sobre a folha', valor: prev.valor});
       let irpj, csll, mem;
       if (k === 'presumido') {
-        const recBruta = reg ? R - reg.deb : R;
+        const recBruta = reg && !e.precoSemTributo ? R - reg.deb : R;
         const pres = e.comMaterial ? PC.presuncao.comMaterial : PC.presuncao.semMaterial;
         const q = lc224(recBruta, pres.ir, pres.cs, ano);
         ({irpj, csll} = irpjCsll(recBruta * q.pIR, recBruta * q.pCS));
@@ -1492,7 +1517,7 @@
   const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
   const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 2}) + '%';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-  const CORES = {ret: '--s1', simples: '--s1', presumido: '--s3', real: '--s4'};
+  const CORES = {ret: '--s1', simples: '--s1', presumido: '--s3', real: '--s4', lote: '--s2'};
   let ano = 2027;
 
   // Abas
@@ -1512,7 +1537,7 @@
     const n = id => parseFloat($(id).value) || 0;
     const tipo = $('o-tipo').value;
     const base = {cbsRef: n('o-cbsRef') / 100, ibsRef: n('o-ibsRef') / 100};
-    if (tipo === 'incorporacao') return {tipo, e: Object.assign(base, {receita: n('o-receita-i'), terreno: n('o-terreno'), obra: n('o-obra'), obraAte2026: n('o-ate2026') / 100, obraCredito: n('o-credito') / 100, despesas: n('o-despesas'), unidades: n('o-unidades'), lotes: n('o-lotes'), social: $('o-social').checked, ipca: n('o-ipca') / 100, area: n('o-area'), equivalencia: n('o-equiv') / 100, vau: n('o-vau'), tipoObra: $('o-tipoobra').value, folhaObra: n('o-folhaobra'), maoObraNotas: n('o-notas'), aliqAfericao: n('o-aliqaf') / 100})};
+    if (tipo === 'incorporacao') return {tipo, e: Object.assign(base, {receita: n('o-receita-i'), terreno: n('o-terreno'), obra: n('o-obra'), obraAte2026: n('o-ate2026') / 100, obraCredito: n('o-credito') / 100, despesas: n('o-despesas'), unidades: n('o-unidades'), lotes: n('o-lotes'), social: $('o-social').checked, loteamento: $('o-loteamento').checked, precoSemTributo: $('o-semtrib').checked, redSocialUnidade: n('o-rsun'), redSocialLote: n('o-rslote'), ipca: n('o-ipca') / 100, area: n('o-area'), equivalencia: n('o-equiv') / 100, vau: n('o-vau'), tipoObra: $('o-tipoobra').value, folhaObra: n('o-folhaobra'), maoObraNotas: n('o-notas'), aliqAfericao: n('o-aliqaf') / 100})};
     return {tipo, e: Object.assign(base, {receita: n('o-receita-c'), folha: n('o-folha'), margem: n('o-margem') / 100, comMaterial: $('o-commaterial').checked, material: n('o-material') / 100, iss: n('o-iss') / 100, ratTerceiros: n('o-rat') / 100, dedMaterialIss: $('o-dediss').checked, cprb: $('o-cprb').checked, issRetido: $('o-issret').checked})};
   }
 
@@ -1522,12 +1547,12 @@
     const proj = K.projecao(tipo, e);
     const res = proj.find(p => p.ano === ano);
     document.querySelectorAll('#o-anos button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ano === ano)));
-    const ordem = tipo === 'incorporacao' ? ['ret', 'presumido', 'real'] : ['simples', 'presumido', 'real'];
+    const ordem = (tipo === 'incorporacao' ? ['ret', 'presumido', 'real', 'lote'] : ['simples', 'presumido', 'real']).filter(k => proj.some(x => x.regimes[k]));
     const eleg = ordem.filter(k => res.regimes[k] && res.regimes[k].elegivel);
     const melhor = eleg.slice().sort((a, b) => res.regimes[a].total - res.regimes[b].total)[0];
 
     $('o-cartoes').innerHTML = ordem.map(k => {
-      const r = res.regimes[k];
+      const r = res.regimes[k] || {nome: proj.find(x => x.regimes[k]).regimes[k].nome, elegivel: false, motivo: 'Opção disponível a partir de 2027'};
       if (!r.elegivel) return '<div class="cartao ne"><div class="nome"><span class="ponto" style="background:var(' + CORES[k] + ')"></span>' + esc(r.nome) + '</div><div class="valor">Não se aplica</div><div class="sub">' + esc(r.motivo) + '</div></div>';
       const top = k === melhor;
       return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') +
@@ -1561,7 +1586,7 @@
     $('o-tabela').innerHTML = h;
 
     let p = '<table><thead><tr><th>Regime</th>' + M.PARAM.anos.map(a => '<th>' + a + '</th>').join('') + '</tr></thead><tbody>';
-    ordem.forEach(k => { p += '<tr><td>' + esc(proj[0].regimes[k].nome) + '</td>' + proj.map(x => { const r = x.regimes[k]; return '<td' + (x.ano === ano ? ' style="font-weight:bold"' : '') + '>' + (r.elegivel ? brl(r.total) : '—') + '</td>'; }).join('') + '</tr>'; });
+    ordem.forEach(k => { p += '<tr><td>' + esc(proj.find(x => x.regimes[k]).regimes[k].nome) + '</td>' + proj.map(x => { const r = x.regimes[k]; return '<td' + (x.ano === ano ? ' style="font-weight:bold"' : '') + '>' + (r && r.elegivel ? brl(r.total) : '—') + '</td>'; }).join('') + '</tr>'; });
     $('o-proj').innerHTML = p + '</tbody></table>';
 
     $('o-memoria').innerHTML = eleg.map(k => { const r = res.regimes[k]; return '<details><summary>' + esc(r.nome) + '</summary><ul>' + (r.memoria || []).map(m => '<li>' + esc(m.texto) + (m.valor !== null && m.valor !== undefined ? ': <b>' + brl(m.valor) + '</b>' : '') + '</li>').join('') + '</ul></details>'; }).join('');

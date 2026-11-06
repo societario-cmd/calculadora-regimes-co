@@ -21,3 +21,21 @@ assert.ok(a1 < a0);
 // retenção 3,5% com CPRB em 2026, 11% em 2028
 assert.strictEqual(K.construtora(c, 2026).retencoes.pInss, .035); assert.strictEqual(K.construtora(c, 2028).retencoes.pInss, .11);
 console.log('AFERICAO/RETENCAO OK');
+
+// --- Loteamento art. 486 e redutor social atualizado (05/11/2026) ---
+{
+  const C2 = require('../construcao.js');
+  const base = {receita: 2000000, terreno: 300000, obra: 500000, obraAte2026: 0, obraCredito: 0, despesas: 0, unidades: 0, lotes: 20, cbsRef: 11.3, ibsRef: 18.7};
+  const sem = C2.incorporacao(base, 2027);
+  if (sem.regimes.lote) throw new Error('art. 486 só com a opção marcada');
+  const com = C2.incorporacao(Object.assign({}, base, {loteamento: true}), 2027);
+  const l = com.regimes.lote;
+  const cbsIbs = l.itens.find(i => i.nome.startsWith('CBS/IBS')).valor;
+  if (Math.abs(cbsIbs - 73000) > 0.01) throw new Error('3,65% de 2 mi = 73.000, veio ' + cbsIbs);
+  if (C2.incorporacao(Object.assign({}, base, {loteamento: true}), 2026).regimes.lote) throw new Error('art. 486 não se aplica em 2026');
+  // redutor social informado (valor do mês) substitui o nominal
+  const a = C2.incorporacao(Object.assign({}, base, {lotes: 1, unidades: 1}), 2027);
+  const b = C2.incorporacao(Object.assign({}, base, {lotes: 1, unidades: 1, redSocialUnidade: 108211.06, redSocialLote: 32463.32}), 2027);
+  if (!(b.regimes.presumido.total < a.regimes.presumido.total)) throw new Error('redutor social atualizado deve reduzir a CBS/IBS');
+  console.log('ok loteamento 486 e redutor social atualizado');
+}

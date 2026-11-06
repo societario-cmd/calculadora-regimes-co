@@ -265,7 +265,7 @@
         <div><label for="o-credito">Insumos com crédito (%)</label><input id="o-credito" type="number" min="0" max="100" step="5" value="70"></div>
       </div>
       <div class="dica">A obra até 2026 entra no redutor de ajuste; a partir de 2027 os insumos comprados de fornecedores do regime regular geram crédito.</div>
-      <label for="o-ipca">IPCA acumulado da aquisição até a venda (%)</label>
+      <label for="o-ipca">IPCA acumulado da aquisição até a venda (%) — atualização até 31/12/2026 e, depois, até o fato gerador (LC 214, arts. 257 e 258, § 4º)</label>
       <input id="o-ipca" type="number" min="0" max="200" step="0.5" value="0">
       <div class="dica">Corrige o redutor de ajuste (LC 214, art. 258).</div>
       <label for="o-despesas">Outras despesas (comercial, administrativo) (R$)</label>
@@ -273,9 +273,13 @@
       <div class="linha2">
         <div><label for="o-unidades">Unidades residenciais novas vendidas</label><input id="o-unidades" type="number" min="0" step="1" value="20"></div>
         <div><label for="o-lotes">Lotes residenciais vendidos</label><input id="o-lotes" type="number" min="0" step="1" value="0"></div>
+        <div><label for="o-rsun">Redutor social por imóvel novo (R$, valor do mês — art. 259, § 3º)</label><input id="o-rsun" type="number" min="0" step="0.01" value="108211.06"></div>
+        <div><label for="o-rslote">Redutor social por lote (R$, valor do mês)</label><input id="o-rslote" type="number" min="0" step="0.01" value="32463.32"></div>
       </div>
       <div class="dica">Redutor social de R$ 100 mil por unidade e R$ 30 mil por lote (LC 214, art. 259).</div>
       <label class="check"><input id="o-social" type="checkbox"> Empreendimento de interesse social (RET 1% / 0,53% de CBS/IBS)</label>
+ <label class="check"><input id="o-semtrib" type="checkbox"> A receita/preço informado não inclui CBS/IBS (tributo cobrado por fora, além do preço)</label>
+      <label class="check"><input id="o-loteamento" type="checkbox"> Loteamento com registro pedido até 31/12/2028 — comparar com a opção de 3,65% (LC 214, art. 486)</label>
     </div>
     <div class="grupo" data-tipo="incorporacao">
       <h3>INSS da obra — aferição no Sero (opcional)</h3>
@@ -355,7 +359,7 @@
           <li>Simples (Anexo IV) calculado pelo motor geral: CPP fora do DAS e sem CPRB.</li>
           <li>INSS da obra (IN RFB 2.021/2021): RMT = área × equivalência × VAU × 20% (alvenaria), 15% (madeira ou mista) ou 12% (interesse social); sobre a diferença entre a RMT e a remuneração comprovada incide a alíquota informada (padrão 36,8%). Não aplica decadência, fator social de pessoa física nem a redução de 70% de pré-moldados.</li>
           <li>Retenções da construtora: INSS de 11% (3,5% para optante da CPRB até 2027) sobre a nota menos os materiais, e ISS retido. São antecipação, não custo.</li>
-          <li>Não considera: ITBI, regime de caixa × competência, permuta, loteamento pelo art. 486 e incorporação fora do patrimônio de afetação.</li>
+          <li>Não considera: ITBI, regime de caixa × competência, permuta e incorporação fora do patrimônio de afetação.</li>
         </ul>
       </details>
     </div>
@@ -722,7 +726,7 @@
   const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 0});
   const pct = v => ((v || 0) * 100).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 2}) + '%';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-  const CORES = {ret: '--s1', simples: '--s1', presumido: '--s3', real: '--s4'};
+  const CORES = {ret: '--s1', simples: '--s1', presumido: '--s3', real: '--s4', lote: '--s2'};
   let ano = 2027;
 
   // Abas
@@ -742,7 +746,7 @@
     const n = id => parseFloat($(id).value) || 0;
     const tipo = $('o-tipo').value;
     const base = {cbsRef: n('o-cbsRef') / 100, ibsRef: n('o-ibsRef') / 100};
-    if (tipo === 'incorporacao') return {tipo, e: Object.assign(base, {receita: n('o-receita-i'), terreno: n('o-terreno'), obra: n('o-obra'), obraAte2026: n('o-ate2026') / 100, obraCredito: n('o-credito') / 100, despesas: n('o-despesas'), unidades: n('o-unidades'), lotes: n('o-lotes'), social: $('o-social').checked, ipca: n('o-ipca') / 100, area: n('o-area'), equivalencia: n('o-equiv') / 100, vau: n('o-vau'), tipoObra: $('o-tipoobra').value, folhaObra: n('o-folhaobra'), maoObraNotas: n('o-notas'), aliqAfericao: n('o-aliqaf') / 100})};
+    if (tipo === 'incorporacao') return {tipo, e: Object.assign(base, {receita: n('o-receita-i'), terreno: n('o-terreno'), obra: n('o-obra'), obraAte2026: n('o-ate2026') / 100, obraCredito: n('o-credito') / 100, despesas: n('o-despesas'), unidades: n('o-unidades'), lotes: n('o-lotes'), social: $('o-social').checked, loteamento: $('o-loteamento').checked, precoSemTributo: $('o-semtrib').checked, redSocialUnidade: n('o-rsun'), redSocialLote: n('o-rslote'), ipca: n('o-ipca') / 100, area: n('o-area'), equivalencia: n('o-equiv') / 100, vau: n('o-vau'), tipoObra: $('o-tipoobra').value, folhaObra: n('o-folhaobra'), maoObraNotas: n('o-notas'), aliqAfericao: n('o-aliqaf') / 100})};
     return {tipo, e: Object.assign(base, {receita: n('o-receita-c'), folha: n('o-folha'), margem: n('o-margem') / 100, comMaterial: $('o-commaterial').checked, material: n('o-material') / 100, iss: n('o-iss') / 100, ratTerceiros: n('o-rat') / 100, dedMaterialIss: $('o-dediss').checked, cprb: $('o-cprb').checked, issRetido: $('o-issret').checked})};
   }
 
@@ -752,12 +756,12 @@
     const proj = K.projecao(tipo, e);
     const res = proj.find(p => p.ano === ano);
     document.querySelectorAll('#o-anos button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.ano === ano)));
-    const ordem = tipo === 'incorporacao' ? ['ret', 'presumido', 'real'] : ['simples', 'presumido', 'real'];
+    const ordem = (tipo === 'incorporacao' ? ['ret', 'presumido', 'real', 'lote'] : ['simples', 'presumido', 'real']).filter(k => proj.some(x => x.regimes[k]));
     const eleg = ordem.filter(k => res.regimes[k] && res.regimes[k].elegivel);
     const melhor = eleg.slice().sort((a, b) => res.regimes[a].total - res.regimes[b].total)[0];
 
     $('o-cartoes').innerHTML = ordem.map(k => {
-      const r = res.regimes[k];
+      const r = res.regimes[k] || {nome: proj.find(x => x.regimes[k]).regimes[k].nome, elegivel: false, motivo: 'Opção disponível a partir de 2027'};
       if (!r.elegivel) return '<div class="cartao ne"><div class="nome"><span class="ponto" style="background:var(' + CORES[k] + ')"></span>' + esc(r.nome) + '</div><div class="valor">Não se aplica</div><div class="sub">' + esc(r.motivo) + '</div></div>';
       const top = k === melhor;
       return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') +
@@ -791,7 +795,7 @@
     $('o-tabela').innerHTML = h;
 
     let p = '<table><thead><tr><th>Regime</th>' + M.PARAM.anos.map(a => '<th>' + a + '</th>').join('') + '</tr></thead><tbody>';
-    ordem.forEach(k => { p += '<tr><td>' + esc(proj[0].regimes[k].nome) + '</td>' + proj.map(x => { const r = x.regimes[k]; return '<td' + (x.ano === ano ? ' style="font-weight:bold"' : '') + '>' + (r.elegivel ? brl(r.total) : '—') + '</td>'; }).join('') + '</tr>'; });
+    ordem.forEach(k => { p += '<tr><td>' + esc(proj.find(x => x.regimes[k]).regimes[k].nome) + '</td>' + proj.map(x => { const r = x.regimes[k]; return '<td' + (x.ano === ano ? ' style="font-weight:bold"' : '') + '>' + (r && r.elegivel ? brl(r.total) : '—') + '</td>'; }).join('') + '</tr>'; });
     $('o-proj').innerHTML = p + '</tbody></table>';
 
     $('o-memoria').innerHTML = eleg.map(k => { const r = res.regimes[k]; return '<details><summary>' + esc(r.nome) + '</summary><ul>' + (r.memoria || []).map(m => '<li>' + esc(m.texto) + (m.valor !== null && m.valor !== undefined ? ': <b>' + brl(m.valor) + '</b>' : '') + '</li>').join('') + '</ul></details>'; }).join('');

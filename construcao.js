@@ -16,8 +16,13 @@
       social: {irpj: .0031, csll: .0016, pis: .0007, cofins: .0046, cbsIbs: .0053}
     },
     reducaoImoveis: .5,            // LC 214/2025, art. 261
-    redutorSocialUnidade: 100000,  // LC 214/2025, art. 259 (imóvel residencial novo)
+    // Redutor social: R$ 100 mil por imóvel residencial novo e R$ 30 mil por lote (LC 214/2025, art. 259),
+    // atualizados mensalmente pelo IPCA desde a publicação da LC (art. 259, § 3º). Valor nominal aqui; o valor do mês entra pela tela.
+    redutorSocialUnidade: 100000,
     redutorSocialLote: 30000,
+    // Parcelamento do solo com pedido de registro (Lei 6.766/1979) antes de 01/01/2029: opção por IBS+CBS de 3,65% da receita
+    // bruta recebida, sem créditos e sem redutores de ajuste e social (LC 214/2025, art. 486; Res. CGIBS 6/2026, art. 462)
+    loteamento486: .0365,
     // CPRB construção civil: 4,5% da receita (Lei 12.546/2011, art. 7º, IV); transição da Lei 14.973/2024
     cprb: {aliquota: .045, fatorReceita: {2026: .6, 2027: .4}, cppFolha: {2026: .10, 2027: .15}},
     // Aferição indireta da obra (IN RFB 2.021/2021, art. 25): RMT = área × % equivalência × VAU × % por tipo
@@ -71,10 +76,13 @@
     if (ano >= 2027) {
       const tVenda = tCheia * (1 - PC.reducaoImoveis);
       const redAjuste = (terreno + obra * (+e.obraAte2026 || 0)) * (1 + Math.max(0, +e.ipca || 0)); // atualizado pelo IPCA (art. 258)
-      const redSocial = (Math.max(0, +e.unidades || 0) * PC.redutorSocialUnidade) + (Math.max(0, +e.lotes || 0) * PC.redutorSocialLote);
+      const vUn = +e.redSocialUnidade > 0 ? +e.redSocialUnidade : PC.redutorSocialUnidade;
+      const vLote = +e.redSocialLote > 0 ? +e.redSocialLote : PC.redutorSocialLote;
+      const redSocial = (Math.max(0, +e.unidades || 0) * vUn) + (Math.max(0, +e.lotes || 0) * vLote);
       const base0 = Math.max(0, R - redAjuste);
       const base = Math.max(0, base0 - redSocial);
-      const deb = tVenda * base / (1 + tVenda);
+      // CBS/IBS são "por fora" (LC 214, art. 12, § 2º, I). Se a receita informada já embute o tributo, extrai-se por dentro.
+      const deb = e.precoSemTributo ? tVenda * base : tVenda * base / (1 + tVenda);
       const obraNova = obra * (1 - (+e.obraAte2026 || 0)) * (+e.obraCredito || 0);
       const cred = tCheia * obraNova / (1 + tCheia);
       const liq = Math.max(0, deb - cred);
@@ -84,7 +92,7 @@
 
     // Presumido
     {
-      const recBruta = reg ? R - reg.deb : R;
+      const recBruta = reg && !e.precoSemTributo ? R - reg.deb : R;
       const q = lc224(recBruta, PC.presuncao.imoveis.ir, PC.presuncao.imoveis.cs, ano);
       const {irpj, csll} = irpjCsll(recBruta * q.pIR, recBruta * q.pCS);
       const itens = [{nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll}];
@@ -110,6 +118,18 @@
         memoria: [memo('Lucro antes dos tributos = receita − terreno − obra − despesas', lucroAntes), memo('Lucro real', lucro)].concat(reg ? memRegular(reg) : [])};
     }
 
+    // Loteamento: regime de transição do art. 486 (alternativa ao regime regular, a partir de 2027)
+    if (ano >= 2027 && e.loteamento) {
+      const q = lc224(R, PC.presuncao.imoveis.ir, PC.presuncao.imoveis.cs, ano);
+      const {irpj, csll} = irpjCsll(R * q.pIR, R * q.pCS);
+      const cbsIbs = R * PC.loteamento486;
+      out.regimes.lote = {nome: 'Loteamento art. 486 (Presumido)', elegivel: true,
+        itens: [{nome: 'IRPJ', valor: irpj}, {nome: 'CSLL', valor: csll}, {nome: 'CBS/IBS 3,65% (art. 486)', valor: cbsIbs}],
+        total: irpj + csll + cbsIbs, credito: 0,
+        memoria: [memo('CBS/IBS de 3,65% sobre a receita bruta recebida, sem créditos e sem redutores (LC 214, art. 486)', cbsIbs),
+          memo('IRPJ/CSLL pelo Presumido sobre a receita', irpj + csll)]};
+      out.avisos.push('Loteamento (art. 486): exige pedido de registro do parcelamento até 31/12/2028; afasta o redutor de ajuste e o redutor social, e o comprador contribuinte não toma crédito.');
+    }
     if (reg && reg.saldoCredor > 0) out.avisos.push('No regime regular, os créditos da obra superam o débito de CBS/IBS do ano: há saldo credor a compensar ou ressarcir.');
     if (ano >= 2027) out.avisos.push('RET de transição (LC 214, art. 485): exige patrimônio de afetação e opção pelo RET efetivada até 31/12/2028. Quem compra imóvel de incorporação no RET não toma crédito de CBS/IBS.');
     if (ano === 2026) out.avisos.push('Em 2026 a CBS (0,9%) e o IBS (0,1%) são de teste e compensados: o cálculo usa PIS/COFINS. Veja 2027 para a reforma.');
@@ -176,7 +196,8 @@
     if (ano >= 2027) {
       const tVenda = tCheia * (1 - PC.reducaoImoveis);
       const base = Math.max(0, R - R * (+e.iss || 0) * fL);
-      const deb = tVenda * base / (1 + tVenda);
+      // CBS/IBS são "por fora" (LC 214, art. 12, § 2º, I). Se a receita informada já embute o tributo, extrai-se por dentro.
+      const deb = e.precoSemTributo ? tVenda * base : tVenda * base / (1 + tVenda);
       const cred = e.comMaterial ? tCheia * mat / (1 + tCheia) : 0;
       const liq = Math.max(0, deb - cred);
       const pCbs = tCheia ? ali.cbs / tCheia : 0;
@@ -195,7 +216,7 @@
       itens.push({nome: e.cprb && ano < 2028 ? 'CPRB + CPP (transição)' : 'CPP + encargos sobre a folha', valor: prev.valor});
       let irpj, csll, mem;
       if (k === 'presumido') {
-        const recBruta = reg ? R - reg.deb : R;
+        const recBruta = reg && !e.precoSemTributo ? R - reg.deb : R;
         const pres = e.comMaterial ? PC.presuncao.comMaterial : PC.presuncao.semMaterial;
         const q = lc224(recBruta, pres.ir, pres.cs, ano);
         ({irpj, csll} = irpjCsll(recBruta * q.pIR, recBruta * q.pCS));
