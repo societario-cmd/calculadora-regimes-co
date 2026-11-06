@@ -117,6 +117,7 @@
   <button type="button" role="tab" data-aba="obra" aria-selected="false">Construção e Incorporação</button>
   <button type="button" role="tab" data-aba="venda" aria-selected="false">Venda de imóveis</button>
   <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
+  <button type="button" role="tab" data-aba="itcmd" aria-selected="false">ITCMD</button>
 </nav>
 
 <main id="aba-geral">
@@ -422,6 +423,51 @@
         <li>Corretagem paga pelo vendedor: reduz o valor de alienação da PF (IN SRF 84/2001, art. 19, parágrafo 4º) e é despesa no Lucro Real. Venda a prazo da PF: IR proporcional ao recebido (art. 31). Prejuízo fiscal no Real: até 30% do lucro (Lei 9.065/1995). ITBI do comprador: informativo, pelo valor declarado.</li>
         <li>Permuta: na PF e na PJ tributa-se só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; STJ e SC COSIT 99/2024 para o Presumido); CBS/IBS só sobre a torna (LC 214, art. 252). No campo Valor de venda da permuta, informe o valor do imóvel dado.</li>
         <li>Não considera: outras despesas da venda, crédito de CBS/IBS sobre a corretagem e a trava do art. 258, parágrafo 5º.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
+<main id="aba-itcmd" hidden>
+  <form class="painel" id="form-itcmd" autocomplete="off">
+    <h2>ITCMD — herança e doação</h2>
+    <div class="grupo">
+      <h3>Operação</h3>
+      <div class="linha2">
+        <div><label for="t-op">Operação</label><select id="t-op"><option value="doacao">Doação</option><option value="heranca">Herança (causa mortis)</option></select></div>
+        <div><label for="t-est">Estado</label><select id="t-est"><option value="SP">São Paulo</option><option value="outro">Outro estado (informar)</option></select></div>
+      </div>
+      <div class="linha2">
+        <div><label for="t-ben">Beneficiários (donatários ou herdeiros, partes iguais)</label><input id="t-ben" type="number" min="1" step="1" value="1"></div>
+        <div data-t="doacao"><label for="t-ant">Já doado no ano a cada donatário pelo mesmo doador (R$)</label><input id="t-ant" type="number" min="0" step="1000" value="0"></div>
+      </div>
+      <div data-t="outro" hidden>
+        <div class="linha2">
+          <div><label for="t-aliq">Alíquota (%), se for fixa</label><input id="t-aliq" type="number" min="0" max="8" step="0.5" value="4"></div>
+          <div><label for="t-faixas">Ou tabela progressiva: limite:alíquota; ...</label><input id="t-faixas" type="text" placeholder="ex.: 100000:2; 500000:4; :8"></div>
+        </div>
+        <div class="dica">Tabela em R$ por faixa (marginal); a última faixa sem limite. Confira a lei do estado.</div>
+      </div>
+    </div>
+    <div class="grupo">
+      <h3>Bens transmitidos</h3>
+      <div id="t-bens"></div>
+      <button class="btn" type="button" id="t-add">+ Adicionar bem</button>
+      <div class="dica">Imóvel: valor de mercado declarado e, em SP, o valor venal do IPTU (base mínima). Quotas: patrimônio líquido contábil e ajustado a valor de mercado da parte transmitida (% das quotas).</div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="t-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="t-avisos"></div>
+    <div class="secao painel"><h2>Por bem</h2><div class="tabela-wrap"><table id="t-tabela"></table></div></div>
+    <div class="secao">
+      <h2>Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="t-memoria"></ul></details>
+      <details><summary>Regras aplicadas</summary><ul>
+        <li>Normas gerais: LC 227/2026 — base é o valor de mercado (art. 152); quotas não negociadas, no mínimo o patrimônio líquido ajustado a valor de mercado (art. 154, II); alíquotas progressivas por quinhão, legado ou doação, até o teto do Senado (8%).</li>
+        <li>São Paulo (Lei 10.705/2000): 4% fixo em 2026 (art. 16); imóvel urbano não inferior ao valor venal do IPTU (art. 13); nua-propriedade 2/3 e usufruto 1/3 (art. 9º, parágrafo 2º); isenções do art. 6º em UFESPs (R$ 38,42 em 2026).</li>
+        <li>Projeção: PL 409/2025 (1% a 4% por faixas de 10 mil, 85 mil e 280 mil UFESPs) — não aprovado; mostrado só para planejamento.</li>
+        <li>Não considera: bens no exterior, previdência privada, doação a entidades, multa e juros por atraso, e o ITCMD de outros estados com regras próprias de isenção.</li>
       </ul></details>
     </div>
   </section>
@@ -1511,6 +1557,125 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
 
 </script>
 <script>
+/* Módulo ITCMD — Controller & Oraculu's. Regras conferidas em 06/11/2026.
+ * Normas gerais: CF, art. 155, I e parágrafo 1º, VI (progressividade obrigatória, EC 132/2023); LC 227/2026, arts. 146 a 164
+ * (base = valor de mercado, art. 152; quotas não negociadas: no mínimo o patrimônio líquido ajustado a valor de mercado, art. 154, II).
+ * São Paulo: Lei 10.705/2000 — alíquota única de 4% (art. 16), ainda sem lei de progressividade em 2026; base = valor venal do bem
+ * (art. 9º); imóvel urbano não inferior ao valor venal do IPTU (art. 13); nua-propriedade = 2/3 e usufruto = 1/3 (art. 9º, parágrafo 2º);
+ * isenções do art. 6º em UFESPs (UFESP 2026 = R$ 38,42, Comunicado DICAR 88/2025); doações entre as mesmas partes somam no ano civil.
+ * Quotas em SP: Lei 10.705/2000, art. 14, parágrafo 3º (valor patrimonial). O TJSP tem aceitado o patrimônio líquido contábil;
+ * a SEFAZ-SP (RC 33.625/2026) e a LC 227/2026 exigem valor de mercado — por isso há dois cenários.
+ * Projeção: PL 409/2025 (Alesp), não aprovado — 1% até 10 mil UFESPs, 2% até 85 mil, 3% até 280 mil, 4% acima (por faixa).
+ * Sem DOM: roda no navegador e no Node. */
+(function (raiz) {
+  'use strict';
+
+  const ESTADOS = {
+    SP: {nome: 'São Paulo', aliquota: .04, ufesp: 38.42, fonte: 'Lei 10.705/2000, art. 16 (4% para qualquer valor)',
+      isencoes: {doacao: 2500, imovelResidencial: 5000, imovelUnico: 2500, moveis: 1500, depositos: 1000},
+      projecoes: [{nome: 'PL 409/2025 (Alesp) — se aprovado, vale no ano seguinte à lei', faixasUfesp: [[10000, .01], [85000, .02], [280000, .03], [Infinity, .04]]}]},
+    outro: {nome: 'Outro estado (informar)', aliquota: .04, ufesp: 0, fonte: 'Lei estadual informada pelo usuário', isencoes: null, projecoes: []}
+  };
+
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const pct = v => (v * 100).toFixed(2).replace('.', ',') + '%';
+
+  // Imposto por faixas (marginal); faixas = [[limite em R$, alíquota], ...]
+  function porFaixas(base, faixas) {
+    let t = 0, ant = 0;
+    for (const [lim, a] of faixas) { if (base > ant) t += (Math.min(base, lim) - ant) * a; ant = lim; if (base <= lim) break; }
+    return t;
+  }
+
+  // Base de cada bem (fração transmitida; usufruto; base mínima; quotas contábil × ajustado)
+  function baseBem(b, e) {
+    const frac = Math.min(1, Math.max(0, b.fracao == null || b.fracao === '' ? 1 : +b.fracao));
+    let valor, valorFisco, nota = [];
+    if (b.tipo === 'quotas') {
+      const cont = Math.max(0, +b.plContabil || 0), aj = Math.max(0, +b.plAjustado || 0);
+      valor = cont || aj; valorFisco = Math.max(cont, aj);
+      nota.push('Quotas: contribuinte usa o patrimônio líquido contábil (aceito pelo TJSP); a SEFAZ-SP e a LC 227/2026, art. 154, II, pedem no mínimo o PL ajustado a valor de mercado.');
+    } else {
+      const decl = Math.max(0, +b.valor || 0), venal = Math.max(0, +b.venalIptu || 0);
+      valor = b.tipo === 'imovelUrbano' && venal > decl ? venal : decl;
+      if (b.tipo === 'imovelUrbano' && venal > decl) nota.push('Imóvel urbano: base não inferior ao valor venal do IPTU (Lei 10.705/2000, art. 13).');
+      const ref = Math.max(0, +b.valorReferencia || 0);
+      valorFisco = Math.max(valor, ref);
+      if (ref > valor) nota.push('A SEFAZ-SP pode exigir o valor venal de referência do ITBI (Decreto 55.002/2009); o TJSP afasta essa exigência sem processo administrativo (Tema 1.113 do STJ aplicado ao ITCMD).');
+    }
+    const usuf = e.operacao === 'doacao' && b.usufruto;
+    const fator = usuf ? 2 / 3 : 1;
+    return {valorBem: valor * frac, valorBemFisco: valorFisco * frac, base: valor * frac * fator, baseFisco: valorFisco * frac * fator,
+      usufruto: usuf, terco: usuf ? valor * frac / 3 : 0, tercoFisco: usuf ? valorFisco * frac / 3 : 0, nota};
+  }
+
+  // e: {estado, operacao 'doacao'|'heranca', beneficiarios, doacoesAnteriores (R$ no ano, por donatário), aliquotaOutro, faixasOutro ([[R$, alíquota]]),
+  //     bens: [{descricao, tipo 'imovelUrbano'|'imovelRural'|'quotas'|'dinheiro'|'moveis'|'outros', valor, venalIptu, valorReferencia, plContabil, plAjustado, fracao (0–1), usufruto, residencial, unico}]}
+  function calcular(e) {
+    const est = ESTADOS[e.estado] || ESTADOS.outro;
+    const ufesp = e.estado === 'SP' ? est.ufesp : 0;
+    const n = Math.max(1, Math.round(+e.beneficiarios || 1));
+    const bens = (e.bens || []).filter(b => (+b.valor || 0) + (+b.plContabil || 0) + (+b.plAjustado || 0) > 0);
+    const out = {estado: est, ufesp, operacao: e.operacao, beneficiarios: n, linhas: [], memoria: [], avisos: []};
+    let base = 0, baseFisco = 0, terco = 0, tercoFisco = 0;
+    bens.forEach(b => {
+      const x = baseBem(b, e);
+      let isento = false, motivo = '';
+      if (e.estado === 'SP' && e.operacao === 'heranca') {
+        const vInt = (b.tipo === 'imovelUrbano' || b.tipo === 'imovelRural') ? Math.max(+b.valor || 0, +b.venalIptu || 0) : x.valorBem;
+        if ((b.tipo === 'imovelUrbano' || b.tipo === 'imovelRural') && b.residencial && vInt <= est.isencoes.imovelResidencial * ufesp) { isento = true; motivo = 'imóvel de residência até 5.000 UFESPs, herdeiros residentes sem outro imóvel (art. 6º, I, a)'; }
+        else if ((b.tipo === 'imovelUrbano' || b.tipo === 'imovelRural') && b.unico && vInt <= est.isencoes.imovelUnico * ufesp) { isento = true; motivo = 'único imóvel transmitido, até 2.500 UFESPs (art. 6º, I, b)'; }
+        else if (b.tipo === 'moveis' && x.valorBem <= est.isencoes.moveis * ufesp) { isento = true; motivo = 'móveis que guarnecem o imóvel, até 1.500 UFESPs (art. 6º, I, c)'; }
+        else if (b.tipo === 'dinheiro' && x.valorBem <= est.isencoes.depositos * ufesp) { isento = true; motivo = 'depósitos e aplicações até 1.000 UFESPs (art. 6º, I, d)'; }
+      }
+      const lb = isento ? 0 : x.base, lbf = isento ? 0 : x.baseFisco;
+      base += lb; baseFisco += lbf; terco += isento ? 0 : x.terco; tercoFisco += isento ? 0 : x.tercoFisco;
+      out.linhas.push({descricao: b.descricao || b.tipo, tipo: b.tipo, valorBem: x.valorBem, base: lb, baseFisco: lbf, usufruto: x.usufruto, isento, motivo, nota: x.nota});
+    });
+
+    const porBenef = base / n, porBenefFisco = baseFisco / n;
+    let imposto, impostoFisco, isencaoDoacao = false;
+    const aliq = e.estado === 'SP' ? est.aliquota : Math.max(0, +e.aliquotaOutro || 0);
+    const faixasOutro = e.estado !== 'SP' && Array.isArray(e.faixasOutro) && e.faixasOutro.length ? e.faixasOutro : null;
+    const calcBenef = b => faixasOutro ? porFaixas(b, faixasOutro) : b * aliq;
+    if (e.estado === 'SP' && e.operacao === 'doacao') {
+      // Isenção por doador-donatário no ano civil: se a soma do ano passar de 2.500 UFESPs, tributa o total (art. 6º, II, a)
+      const anteriores = Math.max(0, +e.doacoesAnteriores || 0);
+      const limite = est.isencoes.doacao * ufesp;
+      isencaoDoacao = porBenef + anteriores <= limite;
+      imposto = isencaoDoacao ? 0 : n * calcBenef(porBenef);
+      impostoFisco = porBenefFisco + anteriores <= limite ? 0 : n * calcBenef(porBenefFisco);
+      out.memoria.push('Isenção da doação: até 2.500 UFESPs (' + brl(limite) + ' em 2026) por doador e donatário, somadas as doações do ano civil. Por donatário: ' + brl(porBenef) + (anteriores ? ' + ' + brl(anteriores) + ' já doados no ano' : '') + (isencaoDoacao ? ' — isento.' : ' — acima do limite: tributa o total.'));
+      if (!isencaoDoacao && anteriores > 0 && anteriores <= limite) out.avisos.push('As doações anteriores do ano, que estavam isentas, passam a ser tributadas junto com esta, porque a soma ultrapassou 2.500 UFESPs.');
+    } else {
+      imposto = n * calcBenef(porBenef);
+      impostoFisco = n * calcBenef(porBenefFisco);
+    }
+    out.base = base; out.baseFisco = baseFisco; out.porBeneficiario = porBenef; out.imposto = imposto; out.impostoFisco = impostoFisco; out.isencaoDoacao = isencaoDoacao;
+    const aliqTexto = faixasOutro ? 'tabela progressiva informada' : pct(aliq);
+    out.memoria.unshift('Base total: ' + brl(base) + ' dividida entre ' + n + ' beneficiário(s) = ' + brl(porBenef) + ' cada. Alíquota: ' + aliqTexto + ' (' + est.fonte + '). ITCMD: ' + brl(imposto) + '.');
+    if (terco > 0) {
+      out.usufruto = {terco, tercoFisco, imposto: calcBenef(terco / n) * n};
+      out.memoria.push('Doação com reserva de usufruto: base de 2/3 agora; o 1/3 restante (' + brl(terco) + ', ITCMD estimado ' + brl(out.usufruto.imposto) + ' em valores de hoje) vence na extinção do usufruto, atualizado pela UFESP (Lei 10.705/2000, art. 9º, parágrafo 2º). Há decisões do TJSP afastando esse 1/3 na extinção por morte; a Fazenda cobra.');
+    }
+    // Projeção (PL 409/2025): só informativa
+    out.projecoes = (est.projecoes || []).map(p => {
+      const faixas = p.faixasUfesp.map(([u, a]) => [u === Infinity ? Infinity : u * ufesp, a]);
+      return {nome: p.nome, imposto: n * porFaixas(porBenef, faixas)};
+    });
+    if (impostoFisco > imposto + 0.005) out.avisos.push('Cenário da Fazenda (valor de mercado das quotas ou valor de referência do imóvel): ITCMD de ' + brl(impostoFisco) + ' (+' + brl(impostoFisco - imposto) + '). Discutir judicialmente é ato privativo de advogado.');
+    if (e.estado === 'SP') out.avisos.push('São Paulo ainda cobra 4% fixo em 2026: a progressividade exigida pela EC 132/2023 e pela LC 227/2026 depende de lei estadual (PL 409/2025 e PL 7/2024 em trâmite) e só valeria no ano seguinte à publicação. Há tese de que a alíquota fixa perdeu validade com a LC 227/2026 — matéria judicial.');
+    if (e.estado === 'SP' && e.operacao === 'heranca') out.avisos.push('Isenções de imóvel na herança: conta o valor do imóvel inteiro, não o quinhão (art. 6º, parágrafo 4º, e RC 20.307/2019). Confira as condições (residência, imóvel único).');
+    if (bens.some(b => b.tipo === 'quotas')) out.avisos.push('Holding: a LC 227/2026 tende a elevar a base das quotas ao valor de mercado dos imóveis da sociedade; avalie no estudo de holding o momento da doação.');
+    return out;
+  }
+
+  const api = {ESTADOS, calcular, porFaixas};
+  if (typeof module === 'object' && module.exports) module.exports = api; else raiz.ITCMD = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
 /* Módulo Venda de Imóveis — Controller & Oraculu's
  * Compara a venda de um ou mais imóveis pela pessoa física e pela pessoa jurídica (Presumido e Real), com CBS/IBS a partir de 2027.
  * Parâmetros conferidos em 05/11/2026. Depende de motor.js (Motor.aliquotas, Motor.PARAM) e ipca.js (IPCA.fator, IPCA.redutorSocial).
@@ -2330,6 +2495,73 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
   $('form-venda').addEventListener('input', render);
   $('form-venda').addEventListener('change', render);
   $('form-venda').addEventListener('submit', ev => ev.preventDefault());
+  render();
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  const T = window.ITCMD;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const TIPOS = {imovelUrbano: 'Imóvel urbano', imovelRural: 'Imóvel rural', quotas: 'Quotas / ações', dinheiro: 'Dinheiro e aplicações', moveis: 'Móveis que guarnecem a casa', outros: 'Outros bens'};
+  const num = (cls, rot, val, extra) => '<div class="' + cls + '-w"><label>' + rot + '</label><input class="' + cls + '" type="number" ' + (extra || 'min="0" step="1000"') + ' value="' + esc(val) + '"></div>';
+  function linha(v) {
+    v = v || {};
+    const d = document.createElement('div'); d.className = 'bem'; d.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px';
+    d.innerHTML = '<div class="linha2"><div><label>Tipo</label><select class="tb-tipo">' + Object.entries(TIPOS).map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join('') + '</select></div>' +
+      '<div><label>Descrição</label><input class="tb-desc" type="text" value="' + esc(v.descricao || '') + '"></div></div>' +
+      '<div class="linha2 tb-val">' + num('tb-valor', 'Valor de mercado declarado', v.valor || 0) + num('tb-venal', 'Valor venal do IPTU', v.venalIptu || 0) + '</div>' +
+      '<div class="linha2 tb-quo" hidden>' + num('tb-plc', 'PL contábil da sociedade', v.plContabil || 0) + num('tb-pla', 'PL ajustado a mercado', v.plAjustado || 0) + '</div>' +
+      '<div class="linha2">' + num('tb-frac', '% transmitido', v.fracao == null ? 100 : v.fracao * 100, 'min="0" max="100" step="1"') + num('tb-ref', 'Valor de referência do fisco (opcional)', v.valorReferencia || 0) + '</div>' +
+      '<label class="check tb-usu-w"><input class="tb-usu" type="checkbox"' + (v.usufruto ? ' checked' : '') + '> Doação com reserva de usufruto</label>' +
+      '<label class="check tb-res-w"><input class="tb-res" type="checkbox"' + (v.residencial ? ' checked' : '') + '> Imóvel de residência dos herdeiros, que não têm outro</label>' +
+      '<label class="check tb-uni-w"><input class="tb-uni" type="checkbox"' + (v.unico ? ' checked' : '') + '> Único imóvel transmitido</label>' +
+      '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
+    d.querySelector('.tb-tipo').value = v.tipo || 'imovelUrbano';
+    d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
+    $('t-bens').appendChild(d);
+  }
+  linha({descricao: 'Imóvel 1', tipo: 'imovelUrbano', valor: 600000, venalIptu: 350000, usufruto: true});
+  $('t-add').addEventListener('click', () => { linha({descricao: 'Bem ' + ($('t-bens').children.length + 1)}); render(); });
+  function faixas(txt) {
+    const f = String(txt || '').split(';').map(x => x.trim()).filter(Boolean).map(x => { const [l, a] = x.split(':'); return [l && l.trim() ? +l.replace(/\./g, '').replace(',', '.') : Infinity, (+String(a).replace(',', '.') || 0) / 100]; });
+    return f.length ? f : null;
+  }
+  function ler() {
+    const op = $('t-op').value, est = $('t-est').value;
+    return {estado: est, operacao: op, beneficiarios: +$('t-ben').value || 1, doacoesAnteriores: +$('t-ant').value || 0, aliquotaOutro: (+$('t-aliq').value || 0) / 100, faixasOutro: faixas($('t-faixas').value),
+      bens: [...document.querySelectorAll('#t-bens .bem')].map(d => { const q = c => d.querySelector(c); return {tipo: q('.tb-tipo').value, descricao: q('.tb-desc').value, valor: +q('.tb-valor').value || 0, venalIptu: +q('.tb-venal').value || 0,
+        plContabil: +q('.tb-plc').value || 0, plAjustado: +q('.tb-pla').value || 0, fracao: (+q('.tb-frac').value || 0) / 100, valorReferencia: +q('.tb-ref').value || 0, usufruto: q('.tb-usu').checked, residencial: q('.tb-res').checked, unico: q('.tb-uni').checked}; })};
+  }
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  function render() {
+    const e = ler();
+    document.querySelectorAll('#form-itcmd [data-t="doacao"]').forEach(x => { x.hidden = e.operacao !== 'doacao'; });
+    document.querySelector('#form-itcmd [data-t="outro"]').hidden = e.estado !== 'outro';
+    document.querySelectorAll('#t-bens .bem').forEach(d => {
+      const t = d.querySelector('.tb-tipo').value, imo = t === 'imovelUrbano' || t === 'imovelRural';
+      d.querySelector('.tb-val').hidden = t === 'quotas'; d.querySelector('.tb-quo').hidden = t !== 'quotas';
+      d.querySelector('.tb-venal-w').hidden = t !== 'imovelUrbano';
+      d.querySelector('.tb-usu-w').hidden = e.operacao !== 'doacao';
+      d.querySelector('.tb-res-w').hidden = !(imo && e.operacao === 'heranca' && e.estado === 'SP');
+      d.querySelector('.tb-uni-w').hidden = !(imo && e.operacao === 'heranca' && e.estado === 'SP');
+    });
+    const r = T.calcular(e);
+    let c = card('ITCMD devido agora', brl(r.imposto), r.estado.nome + (r.isencaoDoacao ? ' — isento' : ''), true);
+    c += r.usufruto ? card('1/3 na extinção do usufruto', brl(r.usufruto.imposto), 'em valores de hoje, atualizado pela UFESP') : card('Cenário da Fazenda', brl(r.impostoFisco), r.impostoFisco > r.imposto ? 'valor de mercado / referência' : 'igual ao declarado');
+    c += r.projecoes.length ? card('Projeção PL 409/2025 (não aprovado)', brl(r.projecoes[0].imposto), '1% a 4% por faixas') : card('Base por beneficiário', brl(r.porBeneficiario), r.beneficiarios + ' beneficiário(s)');
+    $('t-cartoes').innerHTML = c;
+    $('t-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    $('t-tabela').innerHTML = '<thead><tr><th>Bem</th><th>Valor transmitido</th><th>Base</th><th>Base pelo fisco</th><th>Observação</th></tr></thead><tbody>' +
+      r.linhas.map(l => '<tr><td>' + esc(l.descricao) + '</td><td>' + brl(l.valorBem) + '</td><td>' + brl(l.base) + '</td><td>' + brl(l.baseFisco) + '</td><td>' + esc(l.isento ? 'Isento: ' + l.motivo : (l.usufruto ? 'Nua-propriedade (2/3). ' : '') + l.nota.join(' ')) + '</td></tr>').join('') +
+      '<tr class="total"><td>Total</td><td>' + brl(r.linhas.reduce((s, l) => s + l.valorBem, 0)) + '</td><td>' + brl(r.base) + '</td><td>' + brl(r.baseFisco) + '</td><td></td></tr></tbody>';
+    $('t-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+  }
+  $('form-itcmd').addEventListener('input', render);
+  $('form-itcmd').addEventListener('change', render);
+  $('form-itcmd').addEventListener('submit', ev => ev.preventDefault());
   render();
 })();
 </script>

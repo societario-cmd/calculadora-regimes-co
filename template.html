@@ -117,6 +117,7 @@
   <button type="button" role="tab" data-aba="obra" aria-selected="false">Construção e Incorporação</button>
   <button type="button" role="tab" data-aba="venda" aria-selected="false">Venda de imóveis</button>
   <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
+  <button type="button" role="tab" data-aba="itcmd" aria-selected="false">ITCMD</button>
 </nav>
 
 <main id="aba-geral">
@@ -427,6 +428,51 @@
   </section>
 </main>
 
+<main id="aba-itcmd" hidden>
+  <form class="painel" id="form-itcmd" autocomplete="off">
+    <h2>ITCMD — herança e doação</h2>
+    <div class="grupo">
+      <h3>Operação</h3>
+      <div class="linha2">
+        <div><label for="t-op">Operação</label><select id="t-op"><option value="doacao">Doação</option><option value="heranca">Herança (causa mortis)</option></select></div>
+        <div><label for="t-est">Estado</label><select id="t-est"><option value="SP">São Paulo</option><option value="outro">Outro estado (informar)</option></select></div>
+      </div>
+      <div class="linha2">
+        <div><label for="t-ben">Beneficiários (donatários ou herdeiros, partes iguais)</label><input id="t-ben" type="number" min="1" step="1" value="1"></div>
+        <div data-t="doacao"><label for="t-ant">Já doado no ano a cada donatário pelo mesmo doador (R$)</label><input id="t-ant" type="number" min="0" step="1000" value="0"></div>
+      </div>
+      <div data-t="outro" hidden>
+        <div class="linha2">
+          <div><label for="t-aliq">Alíquota (%), se for fixa</label><input id="t-aliq" type="number" min="0" max="8" step="0.5" value="4"></div>
+          <div><label for="t-faixas">Ou tabela progressiva: limite:alíquota; ...</label><input id="t-faixas" type="text" placeholder="ex.: 100000:2; 500000:4; :8"></div>
+        </div>
+        <div class="dica">Tabela em R$ por faixa (marginal); a última faixa sem limite. Confira a lei do estado.</div>
+      </div>
+    </div>
+    <div class="grupo">
+      <h3>Bens transmitidos</h3>
+      <div id="t-bens"></div>
+      <button class="btn" type="button" id="t-add">+ Adicionar bem</button>
+      <div class="dica">Imóvel: valor de mercado declarado e, em SP, o valor venal do IPTU (base mínima). Quotas: patrimônio líquido contábil e ajustado a valor de mercado da parte transmitida (% das quotas).</div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="t-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="t-avisos"></div>
+    <div class="secao painel"><h2>Por bem</h2><div class="tabela-wrap"><table id="t-tabela"></table></div></div>
+    <div class="secao">
+      <h2>Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="t-memoria"></ul></details>
+      <details><summary>Regras aplicadas</summary><ul>
+        <li>Normas gerais: LC 227/2026 — base é o valor de mercado (art. 152); quotas não negociadas, no mínimo o patrimônio líquido ajustado a valor de mercado (art. 154, II); alíquotas progressivas por quinhão, legado ou doação, até o teto do Senado (8%).</li>
+        <li>São Paulo (Lei 10.705/2000): 4% fixo em 2026 (art. 16); imóvel urbano não inferior ao valor venal do IPTU (art. 13); nua-propriedade 2/3 e usufruto 1/3 (art. 9º, parágrafo 2º); isenções do art. 6º em UFESPs (R$ 38,42 em 2026).</li>
+        <li>Projeção: PL 409/2025 (1% a 4% por faixas de 10 mil, 85 mil e 280 mil UFESPs) — não aprovado; mostrado só para planejamento.</li>
+        <li>Não considera: bens no exterior, previdência privada, doação a entidades, multa e juros por atraso, e o ITCMD de outros estados com regras próprias de isenção.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
 <main id="aba-itbi" hidden>
   <form class="painel" id="form-itbi" autocomplete="off">
     <h2>ITBI</h2>
@@ -522,6 +568,9 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
 </script>
 <script>
 /*IPCA*/
+</script>
+<script>
+/*ITCMD*/
 </script>
 <script>
 /*VENDA*/
@@ -1101,6 +1150,73 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
   $('form-venda').addEventListener('input', render);
   $('form-venda').addEventListener('change', render);
   $('form-venda').addEventListener('submit', ev => ev.preventDefault());
+  render();
+})();
+</script>
+<script>
+(function () {
+  'use strict';
+  const T = window.ITCMD;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const TIPOS = {imovelUrbano: 'Imóvel urbano', imovelRural: 'Imóvel rural', quotas: 'Quotas / ações', dinheiro: 'Dinheiro e aplicações', moveis: 'Móveis que guarnecem a casa', outros: 'Outros bens'};
+  const num = (cls, rot, val, extra) => '<div class="' + cls + '-w"><label>' + rot + '</label><input class="' + cls + '" type="number" ' + (extra || 'min="0" step="1000"') + ' value="' + esc(val) + '"></div>';
+  function linha(v) {
+    v = v || {};
+    const d = document.createElement('div'); d.className = 'bem'; d.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px';
+    d.innerHTML = '<div class="linha2"><div><label>Tipo</label><select class="tb-tipo">' + Object.entries(TIPOS).map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join('') + '</select></div>' +
+      '<div><label>Descrição</label><input class="tb-desc" type="text" value="' + esc(v.descricao || '') + '"></div></div>' +
+      '<div class="linha2 tb-val">' + num('tb-valor', 'Valor de mercado declarado', v.valor || 0) + num('tb-venal', 'Valor venal do IPTU', v.venalIptu || 0) + '</div>' +
+      '<div class="linha2 tb-quo" hidden>' + num('tb-plc', 'PL contábil da sociedade', v.plContabil || 0) + num('tb-pla', 'PL ajustado a mercado', v.plAjustado || 0) + '</div>' +
+      '<div class="linha2">' + num('tb-frac', '% transmitido', v.fracao == null ? 100 : v.fracao * 100, 'min="0" max="100" step="1"') + num('tb-ref', 'Valor de referência do fisco (opcional)', v.valorReferencia || 0) + '</div>' +
+      '<label class="check tb-usu-w"><input class="tb-usu" type="checkbox"' + (v.usufruto ? ' checked' : '') + '> Doação com reserva de usufruto</label>' +
+      '<label class="check tb-res-w"><input class="tb-res" type="checkbox"' + (v.residencial ? ' checked' : '') + '> Imóvel de residência dos herdeiros, que não têm outro</label>' +
+      '<label class="check tb-uni-w"><input class="tb-uni" type="checkbox"' + (v.unico ? ' checked' : '') + '> Único imóvel transmitido</label>' +
+      '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
+    d.querySelector('.tb-tipo').value = v.tipo || 'imovelUrbano';
+    d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
+    $('t-bens').appendChild(d);
+  }
+  linha({descricao: 'Imóvel 1', tipo: 'imovelUrbano', valor: 600000, venalIptu: 350000, usufruto: true});
+  $('t-add').addEventListener('click', () => { linha({descricao: 'Bem ' + ($('t-bens').children.length + 1)}); render(); });
+  function faixas(txt) {
+    const f = String(txt || '').split(';').map(x => x.trim()).filter(Boolean).map(x => { const [l, a] = x.split(':'); return [l && l.trim() ? +l.replace(/\./g, '').replace(',', '.') : Infinity, (+String(a).replace(',', '.') || 0) / 100]; });
+    return f.length ? f : null;
+  }
+  function ler() {
+    const op = $('t-op').value, est = $('t-est').value;
+    return {estado: est, operacao: op, beneficiarios: +$('t-ben').value || 1, doacoesAnteriores: +$('t-ant').value || 0, aliquotaOutro: (+$('t-aliq').value || 0) / 100, faixasOutro: faixas($('t-faixas').value),
+      bens: [...document.querySelectorAll('#t-bens .bem')].map(d => { const q = c => d.querySelector(c); return {tipo: q('.tb-tipo').value, descricao: q('.tb-desc').value, valor: +q('.tb-valor').value || 0, venalIptu: +q('.tb-venal').value || 0,
+        plContabil: +q('.tb-plc').value || 0, plAjustado: +q('.tb-pla').value || 0, fracao: (+q('.tb-frac').value || 0) / 100, valorReferencia: +q('.tb-ref').value || 0, usufruto: q('.tb-usu').checked, residencial: q('.tb-res').checked, unico: q('.tb-uni').checked}; })};
+  }
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  function render() {
+    const e = ler();
+    document.querySelectorAll('#form-itcmd [data-t="doacao"]').forEach(x => { x.hidden = e.operacao !== 'doacao'; });
+    document.querySelector('#form-itcmd [data-t="outro"]').hidden = e.estado !== 'outro';
+    document.querySelectorAll('#t-bens .bem').forEach(d => {
+      const t = d.querySelector('.tb-tipo').value, imo = t === 'imovelUrbano' || t === 'imovelRural';
+      d.querySelector('.tb-val').hidden = t === 'quotas'; d.querySelector('.tb-quo').hidden = t !== 'quotas';
+      d.querySelector('.tb-venal-w').hidden = t !== 'imovelUrbano';
+      d.querySelector('.tb-usu-w').hidden = e.operacao !== 'doacao';
+      d.querySelector('.tb-res-w').hidden = !(imo && e.operacao === 'heranca' && e.estado === 'SP');
+      d.querySelector('.tb-uni-w').hidden = !(imo && e.operacao === 'heranca' && e.estado === 'SP');
+    });
+    const r = T.calcular(e);
+    let c = card('ITCMD devido agora', brl(r.imposto), r.estado.nome + (r.isencaoDoacao ? ' — isento' : ''), true);
+    c += r.usufruto ? card('1/3 na extinção do usufruto', brl(r.usufruto.imposto), 'em valores de hoje, atualizado pela UFESP') : card('Cenário da Fazenda', brl(r.impostoFisco), r.impostoFisco > r.imposto ? 'valor de mercado / referência' : 'igual ao declarado');
+    c += r.projecoes.length ? card('Projeção PL 409/2025 (não aprovado)', brl(r.projecoes[0].imposto), '1% a 4% por faixas') : card('Base por beneficiário', brl(r.porBeneficiario), r.beneficiarios + ' beneficiário(s)');
+    $('t-cartoes').innerHTML = c;
+    $('t-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    $('t-tabela').innerHTML = '<thead><tr><th>Bem</th><th>Valor transmitido</th><th>Base</th><th>Base pelo fisco</th><th>Observação</th></tr></thead><tbody>' +
+      r.linhas.map(l => '<tr><td>' + esc(l.descricao) + '</td><td>' + brl(l.valorBem) + '</td><td>' + brl(l.base) + '</td><td>' + brl(l.baseFisco) + '</td><td>' + esc(l.isento ? 'Isento: ' + l.motivo : (l.usufruto ? 'Nua-propriedade (2/3). ' : '') + l.nota.join(' ')) + '</td></tr>').join('') +
+      '<tr class="total"><td>Total</td><td>' + brl(r.linhas.reduce((s, l) => s + l.valorBem, 0)) + '</td><td>' + brl(r.base) + '</td><td>' + brl(r.baseFisco) + '</td><td></td></tr></tbody>';
+    $('t-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+  }
+  $('form-itcmd').addEventListener('input', render);
+  $('form-itcmd').addEventListener('change', render);
+  $('form-itcmd').addEventListener('submit', ev => ev.preventDefault());
   render();
 })();
 </script>

@@ -77,3 +77,7 @@ Estimativa para apoio ao estudo tributário. Não substitui o parecer nem a aná
 ### Documentos do imóvel na aba ITBI (06/11/2026)
 - Upload da matrícula e da certidão de valor venal (`docs.js`). PDF com texto é lido no navegador com pdf.js (cdnjs), sem envio do arquivo; na versão publicada no Claude, PDF digitalizado ou foto é lido pelo Claude (capacidade `sample`).
 - Extrai matrícula, cartório, endereço, inscrição, áreas, valor da transmissão mais recente, ônus/restrições (com indicação de cancelamento), valor venal, valor de referência, terreno, construção e exercício; botões para usar o valor como referência da prefeitura ou incluir o imóvel na integralização. Sempre conferir com o documento.
+
+### Aba ITCMD (06/11/2026)
+- `itcmd.js`: doação e herança; São Paulo (Lei 10.705/2000: 4% fixo em 2026, base mínima do IPTU para imóvel urbano, nua-propriedade 2/3 e usufruto 1/3, isenções do art. 6º em UFESPs — R$ 38,42 em 2026 — e soma das doações do ano entre as mesmas partes) e outro estado com alíquota fixa ou tabela progressiva informada.
+- Quotas: patrimônio líquido contábil (TJSP) × ajustado a valor de mercado (LC 227/2026, art. 154, II; SEFAZ-SP). Projeção informativa do PL 409/2025 (1% a 4%).
