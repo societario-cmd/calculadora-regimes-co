@@ -53,3 +53,19 @@ console.log('VENDA OK');
   perto(lr4, lr * .7, .01, 'prejuízo limitado a 30% do lucro');
   console.log('VENDA (corretagem/prazo/prejuízo) OK');
 }
+
+// --- Permuta (06/11/2026) ---
+{
+  const pm = (torna, extra) => V.calcular(Object.assign({}, base, {venda: '2026-11'}, extra || {}, {imoveis: [{descricao: 'Terreno', valor: 1000000, custo: 400000, aquisicao: '2015-06', tipo: 'usado', permuta: true, recebido: 1000000 - torna, torna}]}));
+  const sem = pm(0);
+  ok(sem.cenarios.pf.total === 0, 'permuta sem torna isenta na PF');
+  ok(sem.cenarios.presumido.total === 0, 'permuta sem torna sem tributo no Presumido (entendimento atual)');
+  const com = pm(200000);
+  perto(com.porImovel[0].ganhoPF, 200000 - 400000 * .2, .01, 'ganho PF = torna − custo proporcional');
+  perto(com.cenarios.presumido.itens.find(i => i.nome === 'PIS/COFINS').valor, 200000 * .0365, .01, 'PIS/COFINS só na torna');
+  const risco = pm(200000, {permutaRiscoRFB: true});
+  perto(risco.cenarios.presumido.itens.find(i => i.nome === 'PIS/COFINS').valor, 1000000 * .0365, .01, 'cenário de risco: imóvel recebido como receita');
+  const c27 = V.calcular(Object.assign({}, base, {imoveis: [{valor: 1000000, custo: 400000, aquisicao: '2015-06', tipo: 'novo', permuta: true, recebido: 800000, torna: 200000}]}));
+  perto(c27.cenarios.presumido.itens.find(i => i.nome === 'CBS').valor, 200000 * .056, .01, 'CBS só sobre a torna');
+  console.log('VENDA (permuta) OK');
+}

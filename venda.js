@@ -52,6 +52,14 @@
 
   // CBS/IBS de um imóvel no regime regular (LC 214/2025): redutor de ajuste, redutor social, art. 488 e alíquota com redução de 50%
   function cbsIbs(im, e, ali, ano) {
+    if (im.permuta) {
+      const torna = Math.max(0, +im.torna || 0);
+      const tC = ali.cbs * (1 - PV.reducaoImoveis), tI = ali.ibs * (1 - PV.reducaoImoveis);
+      const div = e.precoComTributo ? 1 + tC + tI : 1;
+      return {redAjuste: 0, redSocial: 0, base: torna, ded488: 0, cbs: tC * torna / div, ibs: tI * torna / div, tC, tI,
+        memoria: [memo(im.descricao + ' — permuta: CBS/IBS só sobre a torna; o valor permutado não paga e não entra no redutor (LC 214, art. 252, parágrafos 2º, I, e 3º). Premissa conservadora: torna sem redutor de ajuste', torna),
+          memo(im.descricao + ' — CBS/IBS sobre a torna', tC * torna / div + tI * torna / div)]};
+    }
     const vref = +im.valorReferencia || 0;
     const fat = IP.fator(im.aquisicao, e.venda);
     let redAjuste, origem;
@@ -90,10 +98,22 @@
     const ano = +String(e.venda).slice(0, 4);
     const ali = M.aliquotas(ano, +e.cbsRef, +e.ibsRef);
     const reforma = ano >= 2027;
-    const ims = (e.imoveis || []).filter(i => +i.valor > 0).map((i, k) => Object.assign({descricao: 'Imóvel ' + (k + 1), tipo: 'usado'}, i));
+    const ims = (e.imoveis || []).filter(i => +i.valor > 0 || (i.permuta && (+i.torna > 0 || +i.recebido > 0))).map((i, k) => {
+      const im = Object.assign({descricao: 'Imóvel ' + (k + 1), tipo: 'usado'}, i);
+      const custo = +im.custo || 0, cont = im.contabil != null && im.contabil !== '' ? +im.contabil : custo;
+      if (im.permuta) {
+        // Permuta: tributa-se a torna, com custo proporcional — torna ÷ (torna + imóvel recebido) (IN SRF 84/2001, art. 23; IN SRF 107/1988)
+        const torna = Math.max(0, +im.torna || 0), rec = Math.max(0, +im.recebido || 0);
+        const prop = torna + rec > 0 ? torna / (torna + rec) : 0;
+        const risco = !!e.permutaRiscoRFB;
+        im._rec = risco ? torna + rec : torna; im._custo = risco ? custo : custo * prop; im._cont = risco ? cont : cont * prop; im._prop = prop;
+        im.valor = torna + rec;
+      } else { im._rec = +im.valor || 0; im._custo = custo; im._cont = cont; }
+      return im;
+    });
     const out = {ano, ali, cenarios: {}, porImovel: [], avisos: [], meses: e.trimestral ? 3 : 12};
-    const Rt = ims.reduce((s, i) => s + (+i.valor || 0), 0);
-    const custoT = ims.reduce((s, i) => s + (+i.custo || 0), 0);
+    const Rt = ims.reduce((s, i) => s + i._rec, 0); // receita tributável da PJ (na permuta, a torna)
+    const custoT = ims.reduce((s, i) => s + i._custo, 0);
 
     // CBS/IBS por imóvel (contribuinte do regime regular, a partir de 2027)
     const cbsI = ims.map(i => reforma ? cbsIbs(i, e, ali, ano) : null);
@@ -106,17 +126,18 @@
       let ir = 0;
       ims.forEach((im, k) => {
         const corr = Math.max(0, +im.corretagem || 0);
-        const ganho = Math.max(0, (+im.valor || 0) - corr - (+im.custo || 0)); // corretagem paga pelo vendedor reduz o valor de alienação (IN SRF 84/2001, art. 19, parágrafo 4º)
+        const ganho = im.permuta ? Math.max(0, (+im.torna || 0) - corr - (+im.custo || 0) * im._prop) // permuta: ganho só sobre a torna; sem torna, excluída (IN SRF 84/2001, arts. 23 e 29, IV)
+          : Math.max(0, (+im.valor || 0) - corr - (+im.custo || 0)); // corretagem paga pelo vendedor reduz o valor de alienação (IN SRF 84/2001, art. 19, parágrafo 4º)
         const f = fatoresPF(im.aquisicao, e.venda);
         let base = ganho * (1 - f.red7713) * f.fr1 * f.fr2;
         const residencial = im.tipo === 'novo' || im.tipo === 'usado';
-        const isentoUnico = e.unico440 && ims.length === 1 && (+im.valor || 0) <= PV.isencaoUnico;
+        const isentoUnico = !im.permuta && e.unico440 && ims.length === 1 && (+im.valor || 0) <= PV.isencaoUnico;
         if (isentoUnico) base = 0;
         if (residencial && +im.reinvest > 0) base *= 1 - Math.min(1, +im.reinvest);
         const imp = impostoGC(base);
         ir += imp;
         out.porImovel[k] = {descricao: im.descricao, valor: +im.valor || 0, ganhoPF: ganho, basePF: base, irPF: imp};
-        mem.push(memo(im.descricao + ' — ganho de capital (venda' + (corr ? ' − corretagem' : '') + ' − custo)', ganho));
+        mem.push(memo(im.descricao + (im.permuta ? ' — permuta: ganho = torna − custo × ' + (im._prop * 100).toFixed(2).replace('.', ',') + '% (torna ÷ torna + imóvel recebido)' + (+im.torna ? '' : '; sem torna, não há ganho tributável') : ' — ganho de capital (venda' + (corr ? ' − corretagem' : '') + ' − custo)'), ganho));
         if (f.red7713) mem.push(memo('Redução da Lei 7.713/1988, art. 18 (aquisição em ' + String(im.aquisicao).slice(0, 4) + '): ' + Math.round(f.red7713 * 100) + '%', null));
         mem.push(memo('FR1 = 1/1,0060^' + f.m1 + ' = ' + f.fr1.toFixed(6).replace('.', ',') + '; FR2 = 1/1,0035^' + f.m2 + ' = ' + f.fr2.toFixed(6).replace('.', ',') + ' (Lei 11.196/2005, art. 40)', null));
         if (isentoUnico) mem.push(memo('Isento: único imóvel, venda até R$ 440 mil (Lei 9.250/1995, art. 23)', null));
@@ -131,7 +152,7 @@
         itens.push({nome: 'CBS', valor: cbsT}, {nome: 'IBS', valor: ibsT}); cons = cbsT + ibsT;
         cbsI.forEach(c => { mem.push(...c.memoria); });
       }
-      out.cenarios.pf = {nome: 'Pessoa física', itens, irMesVenda: ir * vista, total: ir + cons, irrf: 0, totalComIrrf: ir + cons, liquido: Rt - ims.reduce((a, i) => a + Math.max(0, +i.corretagem || 0), 0) - ir - (e.precoComTributo ? cons : 0), memoria: mem};
+      out.cenarios.pf = {nome: 'Pessoa física', itens, irMesVenda: ir * vista, total: ir + cons, irrf: 0, totalComIrrf: ir + cons, liquido: ims.reduce((a, i) => a + (i.permuta ? +i.torna || 0 : +i.valor || 0), 0) - ims.reduce((a, i) => a + Math.max(0, +i.corretagem || 0), 0) - ir - (e.precoComTributo ? cons : 0), memoria: mem};
       if (reforma && !e.pfContribuinte) out.avisos.push('Pessoa física sem CBS/IBS: só vira contribuinte se, no ano anterior, vendeu mais de 3 imóveis ou mais de 1 imóvel construído por ela nos 5 anos anteriores, ou se passar desses limites no próprio ano (LC 214, art. 251). Marque a opção se for o caso.');
     }
 
@@ -139,7 +160,7 @@
     const ativo = e.classificacao === 'ativo';
     const corrT = ims.reduce((s, i) => s + Math.max(0, +i.corretagem || 0), 0);
     const prejuizo = Math.max(0, +e.prejuizo || 0);
-    const contabilT = ims.reduce((s, i) => s + (i.contabil != null && i.contabil !== '' ? +i.contabil : (+i.custo || 0)), 0);
+    const contabilT = ims.reduce((s, i) => s + i._cont, 0);
     const meses = out.meses;
     const montarPJ = (regime) => {
       const itens = [], mem = [];
@@ -201,6 +222,9 @@
     if (reforma && ativo) out.avisos.push('Desde 2027 a venda de imóvel do ativo imobilizado ou de investimento da PJ do regime regular também tem CBS/IBS, com redutor de ajuste; a exclusão do PIS/COFINS não se repete na LC 214.');
     if (reforma && idx(e.venda) > IP.ultimo) out.avisos.push('IPCA publicado até ' + IP.ultimoRotulo + '; os meses seguintes entram como 0% até a divulgação (o redutor real será um pouco maior).');
     if (ims.some(i => idx(i.aquisicao) >= idx('2027-01'))) out.avisos.push('Imóvel adquirido a partir de 2027: o redutor de ajuste é o valor da aquisição corrigido (art. 258, III), limitado nas revendas em menos de 3 anos sem comprovação de IR/ITBI (art. 258, parágrafo 5º).');
+    if (ims.some(i => i.permuta)) out.avisos.push(e.permutaRiscoRFB
+      ? 'Permuta — cenário de risco: o imóvel recebido entra como receita da PJ (entendimento antigo da Receita para o Presumido). O STJ e o CARF afastam essa cobrança, e a Receita passou a tributar só a torna (SC COSIT 99/2024).'
+      : 'Permuta: PJ e PF tributam só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; para o Presumido, STJ e SC COSIT 99/2024). CBS/IBS só sobre a torna (LC 214, art. 252). O imóvel recebido fica com o custo do imóvel dado; cada transmissão paga ITBI. "Fica com o vendedor" mostra só o dinheiro.');
     if (corrT) out.avisos.push('Corretagem: reduz o ganho da PF e é despesa no Lucro Real; no Presumido não é dedutível. A partir de 2027, a CBS/IBS cobrada na corretagem dá crédito à PJ contribuinte (não considerado aqui).');
     if (e.distribuir) out.avisos.push('O IRRF de 10% sobre lucros é antecipação do imposto mínimo anual (IRPFM) do sócio; distribuições até R$ 50 mil por mês por sócio não têm retenção. Na PF a comparação considera só o IR de ganho de capital.');
     out.receita = Rt; out.custo = custoT;

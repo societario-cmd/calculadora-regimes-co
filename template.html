@@ -396,6 +396,7 @@
       <label class="check"><input id="v-dist" type="checkbox" checked> Distribuir o lucro aos sócios no mês (IRRF de 10% — Lei 15.270/2025)</label>
       <label class="check"><input id="v-comtrib" type="checkbox"> O preço já inclui a CBS/IBS (tributo extraído do preço)</label>
       <label class="check"><input id="v-pfcontrib" type="checkbox"> A PF é contribuinte de CBS/IBS (LC 214, art. 251)</label>
+      <label class="check"><input id="v-risco" type="checkbox"> Permuta: simular o cenário de risco (imóvel recebido como receita da PJ no Presumido)</label>
       <label class="check"><input id="v-unico" type="checkbox"> PF: único imóvel, sem outra venda em 5 anos (isenção até R$ 440 mil)</label>
     </div>
     <div class="grupo">
@@ -419,7 +420,8 @@
         <li>A partir de 2027 (PJ e PF contribuinte): CBS/IBS com redução de 50%, redutor de ajuste (custo × IPCA mensal desde a aquisição, ou valor de referência), redutor social de R$ 100 mil por residencial novo e R$ 30 mil por lote corrigidos pelo IPCA, e dedução do art. 488 no IBS a partir de 2029.</li>
         <li>IPCA mensal oficial do IBGE (série 433 do Banco Central), publicado até <span id="v-ipca"></span>.</li>
         <li>Corretagem paga pelo vendedor: reduz o valor de alienação da PF (IN SRF 84/2001, art. 19, parágrafo 4º) e é despesa no Lucro Real. Venda a prazo da PF: IR proporcional ao recebido (art. 31). Prejuízo fiscal no Real: até 30% do lucro (Lei 9.065/1995). ITBI do comprador: informativo, pelo valor declarado.</li>
-        <li>Não considera: permuta, outras despesas da venda, crédito de CBS/IBS sobre a corretagem e a trava do art. 258, parágrafo 5º.</li>
+        <li>Permuta: na PF e na PJ tributa-se só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; STJ e SC COSIT 99/2024 para o Presumido); CBS/IBS só sobre a torna (LC 214, art. 252). No campo Valor de venda da permuta, informe o valor do imóvel dado.</li>
+        <li>Não considera: outras despesas da venda, crédito de CBS/IBS sobre a corretagem e a trava do art. 258, parágrafo 5º.</li>
       </ul></details>
     </div>
   </section>
@@ -967,9 +969,13 @@
       '<div><label>Tipo</label><select class="vi-tipo"><option value="novo">Residencial novo</option><option value="usado">Residencial usado</option><option value="lote">Lote residencial</option><option value="comercial">Comercial / outro</option></select></div></div>' +
       '<div class="linha2">' + campo('vi-cont', 'Custo contábil (PJ ativo)', 'number', v.contabil == null ? '' : v.contabil) + campo('vi-ref', 'Valor de referência (opcional)', 'number', v.valorReferencia || 0) + '</div>' +
       '<div class="linha2">' + campo('vi-488', 'Custos 2027–2032 c/ ICMS/ISS', 'number', v.ded488 || 0) + campo('vi-rein', 'PF: % reinvestido em 180 dias', 'number', v.reinvest || 0, 'min="0" max="100" step="5"') + '</div>' +
-      '<div class="linha2">' + campo('vi-corr', 'Corretagem paga pelo vendedor', 'number', v.corretagem || 0) + '<div></div></div>' +
+      '<div class="linha2">' + campo('vi-corr', 'Corretagem paga pelo vendedor', 'number', v.corretagem || 0) + '<div><label>Operação</label><select class="vi-op"><option value="venda">Venda</option><option value="permuta">Permuta</option></select></div></div>' +
+      '<div class="linha2 vi-perm" hidden>' + campo('vi-receb', 'Imóvel recebido em permuta (valor)', 'number', v.recebido || 0) + campo('vi-torna', 'Torna recebida em dinheiro', 'number', v.torna || 0) + '</div>' +
       '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
     d.querySelector('.vi-tipo').value = v.tipo || 'usado';
+    d.querySelector('.vi-op').value = v.permuta ? 'permuta' : 'venda';
+    const sincr = () => { d.querySelector('.vi-perm').hidden = d.querySelector('.vi-op').value !== 'permuta'; };
+    d.querySelector('.vi-op').addEventListener('change', sincr); sincr();
     d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
     $('v-imoveis').appendChild(d);
   }
@@ -979,7 +985,8 @@
     const n = id => parseFloat($(id).value) || 0;
     return {venda: $('v-data').value || '2027-06', socios: n('v-socios'), cbsRef: n('v-cbs') / 100, ibsRef: n('v-ibs') / 100, classificacao: $('v-class').value,
       trimestral: $('v-trim').checked, distribuir: $('v-dist').checked, precoComTributo: $('v-comtrib').checked, pfContribuinte: $('v-pfcontrib').checked, unico440: $('v-unico').checked,
-      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100, corretagem: +q('.vi-corr') || 0}; }),
+      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100, corretagem: +q('.vi-corr') || 0, permuta: q('.vi-op') === 'permuta', recebido: +q('.vi-receb') || 0, torna: +q('.vi-torna') || 0}; }),
+      permutaRiscoRFB: $('v-risco').checked,
       fracaoVista: $('v-vista').value === '' ? 1 : n('v-vista') / 100, prejuizo: n('v-prej'), municipio: $('v-mun').value};
   }
   function render() {
