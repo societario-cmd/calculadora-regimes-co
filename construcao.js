@@ -82,12 +82,19 @@
       const base0 = Math.max(0, R - redAjuste);
       const base = Math.max(0, base0 - redSocial);
       // CBS/IBS são "por fora" (LC 214, art. 12, § 2º, I). Se a receita informada já embute o tributo, extrai-se por dentro.
-      const deb = e.precoSemTributo ? tVenda * base : tVenda * base / (1 + tVenda);
+      // Art. 488: a partir de 2029, os custos de 2027–2032 sujeitos a ICMS/ISS deduzem só a base do IBS (não vale com art. 485/486)
+      const ded488 = ano >= 2029 ? Math.min(base, Math.max(0, +e.ded488 || 0)) : 0;
+      const tC = ali.cbs * (1 - PC.reducaoImoveis), tI = ali.ibs * (1 - PC.reducaoImoveis);
+      const div = e.precoSemTributo ? 1 : 1 + tVenda;
+      const debC = tC * base / div, debI = tI * (base - ded488) / div;
+      const deb = debC + debI;
       const obraNova = obra * (1 - (+e.obraAte2026 || 0)) * (+e.obraCredito || 0);
       const cred = tCheia * obraNova / (1 + tCheia);
       const liq = Math.max(0, deb - cred);
       const pCbs = tCheia ? ali.cbs / tCheia : 0;
-      reg = {tVenda, redAjuste, redSocial, base, deb, cred, liq, cbs: liq * pCbs, ibs: liq * (1 - pCbs), saldoCredor: Math.max(0, cred - deb)};
+      // crédito rateado pela proporção CBS/IBS da alíquota cheia; débito separado por tributo
+      const cbsL = Math.max(0, debC - cred * pCbs), ibsL = Math.max(0, debI - cred * (1 - pCbs));
+      reg = {tVenda, redAjuste, redSocial, base, ded488, deb, cred, liq: cbsL + ibsL, cbs: cbsL, ibs: ibsL, saldoCredor: Math.max(0, cred - deb)};
     }
 
     // Presumido
@@ -165,9 +172,10 @@
       memo('Redutor de ajuste (terreno + obra incorrida até 2026, corrigidos pelo IPCA; LC 214, art. 258)', -reg.redAjuste),
       memo('Redutor social (R$ 100 mil por unidade residencial nova, R$ 30 mil por lote; art. 259)', -reg.redSocial),
       memo('Base de CBS/IBS', reg.base),
+      reg.ded488 ? memo('(−) Dedução só na base do IBS: aquisições de 2027 a 2032 com ICMS/ISS (LC 214, art. 488)', -reg.ded488) : null,
       memo('Débito com alíquota reduzida em 50% (' + (reg.tVenda * 100).toFixed(2) + '%; art. 261)', reg.deb),
       memo('(−) Crédito dos insumos da obra adquiridos a partir de 2027', -reg.cred)
-    ];
+    ].filter(Boolean);
   }
 
   /* ---------- Construtora (empreitada) ---------- */

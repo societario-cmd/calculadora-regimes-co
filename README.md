@@ -66,3 +66,10 @@ Estimativa para apoio ao estudo tributário. Não substitui o parecer nem a aná
 - Loteamento com registro pedido até 31/12/2028: comparação com a opção de IBS+CBS de 3,65% da receita bruta, sem créditos e sem redutores (LC 214/2025, art. 486; Res. CGIBS 6/2026, art. 462).
 - Redutor social editável com o valor do mês, atualizado pelo IPCA (LC 214/2025, art. 259, § 3º).
 - Opção de preço sem CBS/IBS embutido (tributo por fora, LC 214/2025, art. 12, § 2º).
+
+### Aba "Venda de imóveis" (05/11/2026)
+- Um ou mais imóveis vendidos, comparando pessoa física, PJ no Lucro Presumido e PJ no Lucro Real, com o IRRF de 10% na distribuição (Lei 15.270/2025).
+- PF: ganho de capital com redução da Lei 7.713/1988, FR1/FR2 (Lei 11.196/2005, art. 40), isenção do único imóvel até R$ 440 mil e do reinvestimento em 180 dias, alíquotas de 15% a 22,5%; CBS/IBS se a PF for contribuinte (LC 214, art. 251).
+- PJ: imóvel no estoque (presunção 8%/12%) ou no ativo não circulante (ganho de capital, sem PIS/COFINS até 2026 — Lei 9.718/1998, art. 3º, § 2º, IV); adicional de IRPJ trimestral ou anual.
+- CBS/IBS a partir de 2027 com redutor de ajuste pelo IPCA mensal ou valor de referência, redutor social corrigido e art. 488 (dedução no IBS a partir de 2029, também na aba de incorporação).
+- `ipca.js`: IPCA mensal oficial (BCB/SGS 433) até 09/2026; acrescentar cada novo mês divulgado pelo IBGE.
