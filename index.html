@@ -549,12 +549,25 @@
         <div><label for="m-aist">Alíquota interna da ST (%)</label><input id="m-aist" type="number" min="0" max="40" step="0.01" placeholder="igual à do destino"></div>
       </div>
     </div>
+    <div class="grupo">
+      <h3>Previsão com a reforma (2026–2033)</h3>
+      <div class="linha2">
+        <div><label for="m-cbs">CBS de referência (%)</label><input id="m-cbs" type="number" min="0" max="30" step="0.01" value="11.3"></div>
+        <div><label for="m-ibs">IBS de referência (%)</label><input id="m-ibs" type="number" min="0" max="40" step="0.01" value="18.7"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="m-redr">Redução de CBS/IBS do produto</label><select id="m-redr"><option value="0">Sem redução</option><option value="0.3">30%</option><option value="0.6">60% (alimentos, saúde, insumos agro etc.)</option><option value="1">100% (cesta básica, alíquota zero)</option></select></div>
+        <div><label for="m-pc">PIS/COFINS em 2026</label><select id="m-pc"><option value="0.0925">Não cumulativo (Lucro Real) 9,25%</option><option value="0.0365">Cumulativo (Presumido) 3,65%</option><option value="0">Simples ou sem PIS/COFINS</option></select></div>
+      </div>
+      <div class="dica">CBS 11,3%: cálculo do TCU para 2027, ainda sem a resolução do Senado. IBS 18,7%: referência metodológica do Comitê Gestor. Ajuste quando sair o número oficial.</div>
+    </div>
   </form>
   <section>
     <div class="cartoes" id="m-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
     <div class="avisos" id="m-avisos"></div>
     <div class="secao painel"><h2>Resumo da nota</h2><div class="tabela-wrap"><table id="m-res"></table></div></div>
-    <div class="secao painel"><h2>Transição da reforma (EC 132/2023)</h2><div class="tabela-wrap"><table id="m-proj"></table></div><div class="dica">O ICMS cai para 90%, 80%, 70% e 60% das alíquotas de 2029 a 2032 e acaba em 2033, substituído pelo IBS (ADCT, art. 128). Mesma operação, sem considerar o IBS.</div></div>
+    <div class="secao painel"><h2>Previsão com a reforma — 2026 a 2033</h2><div class="tabela-wrap"><table id="m-proj"></table></div>
+      <div class="dica">Mesma operação ano a ano, com o preço da mercadoria sem tributos constante. ICMS (com FCP, DIFAL e ST) a 100% até 2028, 90%, 80%, 70% e 60% em 2029–2032 e extinto em 2033 (EC 132/2023, ADCT, art. 128). PIS/COFINS até 2026. CBS e IBS por fora, sobre o valor sem ICMS e sem PIS/COFINS: 2026 é teste (0,9% + 0,1%, compensados, não é custo); 2027–2028 CBS = referência − 0,1 ponto e IBS 0,1%; IBS sobe para 10%, 20%, 30% e 40% da referência em 2029–2032 e 100% em 2033 (EC 132/2023, ADCT, arts. 125 a 130). Valores de débito na saída: na CBS e no IBS o comprador contribuinte toma crédito integral.</div></div>
     <div class="secao">
       <h2>Memória e fundamentos</h2>
       <details open><summary>Cálculo</summary><ul id="m-memoria"></ul></details>
@@ -2219,6 +2232,7 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
  * Sem DOM: roda no navegador e no Node. */
 (function (raiz) {
   'use strict';
+  const M = typeof module === 'object' && module.exports ? require('./motor.js') : raiz.Motor;
 
   // interna: alíquota geral; fcp: adicional de fundo de pobreza aplicado em regra geral; ssExES: Sul/Sudeste, exceto ES (origem de 7% para N/NE/CO/ES)
   const UF = {
@@ -2334,7 +2348,28 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
     return out;
   }
 
-  const api = {UF, interestadual, fatorReforma, calcular};
+  /* Previsão com a reforma até 2033 (EC 132/2023; LC 214/2025): a mesma operação ano a ano.
+   * ICMS (com FCP, DIFAL e ST) a 100% até 2028, 90/80/70/60% em 2029–2032 e zero em 2033; PIS/COFINS até 2026;
+   * CBS e IBS por fora, sobre o valor da operação sem ICMS e sem PIS/COFINS (LC 214/2025, art. 12, parágrafo 2º, e art. 13 a partir de 2027).
+   * p: {cbsRef, ibsRef, reducao (0, .3, .6, 1), pisCofins (.0365 | .0925 | 0)} */
+  function previsao(r, p) {
+    const cbsRef = p.cbsRef != null ? +p.cbsRef : .113, ibsRef = p.ibsRef != null ? +p.ibsRef : .187;
+    const red = Math.min(1, Math.max(0, +p.reducao || 0)), pc0 = Math.max(0, +p.pisCofins || 0);
+    const icmsBase = r.total;
+    const semICMS = Math.max(0, r.valorOp - r.icms - r.fcp); // valor da mercadoria sem o ICMS próprio
+    return [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033].map(ano => {
+      const f = fatorReforma(ano), ali = M.aliquotas(ano, cbsRef, ibsRef);
+      const icms = icmsBase * f;
+      const pisCofins = ano <= 2026 ? semICMS * pc0 : 0; // Tema 69 do STF: ICMS fora da base
+      const base = semICMS; // premissa: preço líquido da mercadoria constante; ICMS por dentro, CBS/IBS por fora
+      const cbs = base * ali.cbs * (1 - red), ibs = base * ali.ibs * (1 - red);
+      const teste = !!ali.teste;
+      const custo = icms + pisCofins + (teste ? 0 : cbs + ibs);
+      return {ano, base, fatorICMS: f, aliqCbs: ali.cbs * (1 - red), aliqIbs: ali.ibs * (1 - red), icms, pisCofins, cbs, ibs, teste, total: custo, pct: r.valorOp ? custo / r.valorOp : 0};
+    });
+  }
+
+  const api = {UF, interestadual, fatorReforma, calcular, previsao};
   if (typeof module === 'object' && module.exports) module.exports = api; else raiz.ICMS = api;
 })(typeof self !== 'undefined' ? self : this);
 
@@ -2374,7 +2409,18 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
     linhas.push(['Total de ICMS na operação', r.total]);
     $('m-res').innerHTML = '<tbody>' + linhas.map((l, i) => '<tr' + (i === linhas.length - 1 ? ' class="total"' : '') + '><td>' + l[0] + '</td><td>' + brl(l[1]) + '</td></tr>').join('') +
       '<tr><td>Carga sobre o valor da operação</td><td>' + pc(r.cargaPct) + '</td></tr></tbody>';
-    $('m-proj').innerHTML = '<thead><tr><th>Ano</th>' + r.projecao.map(p => '<th>' + p.ano + '</th>').join('') + '</tr></thead><tbody><tr><td>ICMS (% da alíquota)</td>' + r.projecao.map(p => '<td>' + Math.round(p.fator * 100) + '%</td>').join('') + '</tr><tr><td>ICMS total da operação</td>' + r.projecao.map(p => '<td>' + brl(p.total) + '</td>').join('') + '</tr></tbody>';
+    const pv = C.previsao(r, {cbsRef: n('m-cbs') / 100, ibsRef: n('m-ibs') / 100, reducao: +$('m-redr').value, pisCofins: +$('m-pc').value});
+    const lin = (rot, f, cls) => '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + rot + '</td>' + pv.map(f).join('') + '</tr>';
+    const td = v => '<td>' + v + '</td>';
+    $('m-proj').innerHTML = '<thead><tr><th>Ano</th>' + pv.map(p => '<th>' + p.ano + '</th>').join('') + '</tr></thead><tbody>' +
+      lin('ICMS (% das alíquotas)', p => td(Math.round(p.fatorICMS * 100) + '%')) +
+      lin('ICMS total da operação', p => td(brl(p.icms))) +
+      lin('PIS/COFINS', p => td(brl(p.pisCofins))) +
+      lin('CBS', p => td(brl(p.cbs) + '<div class="dica">' + pc(p.aliqCbs) + (p.teste ? ' teste' : '') + '</div>')) +
+      lin('IBS', p => td(brl(p.ibs) + '<div class="dica">' + pc(p.aliqIbs) + (p.teste ? ' teste' : '') + '</div>')) +
+      lin('Tributos sobre consumo', p => td(brl(p.total)), 'total') +
+      lin('% do valor da operação de 2026', p => td(pc(p.pct))) +
+      lin('Variação sobre 2026', p => td((p.total >= pv[0].total ? '+' : '') + brl(p.total - pv[0].total))) + '</tbody>';
     $('m-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
     $('m-orinome').textContent = C.UF[e.origem].nome;
     $('m-tab').innerHTML = '<thead><tr><th>UF</th><th>Estado</th><th>Alíquota geral</th><th>FCP geral</th><th>Interestadual de ' + e.origem + '</th><th>Observação</th></tr></thead><tbody>' +

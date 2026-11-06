@@ -34,3 +34,11 @@ near(s2.mvaAjustada, 1.4 * .88 / .82 - 1, 1e-9); near(s2.st, 1000 * (1 + s2.mvaA
 // Reforma
 assert.deepStrictEqual([2028, 2029, 2030, 2031, 2032, 2033].map(C.fatorReforma).map(x => Math.round(x * 10) / 10), [1, .9, .8, .7, .6, 0]);
 console.log('ICMS OK');
+// Previsão: SP interna 10.000, não cumulativo
+const pr = C.previsao(C.calcular({origem: 'SP', destino: 'SP', destinatario: 'revenda', produtos: 10000}), {pisCofins: .0925, cbsRef: .113, ibsRef: .187});
+near(pr[0].total, 1800 + 8200 * .0925); assert.ok(pr[0].teste);
+near(pr[1].cbs, 8200 * .112); near(pr[1].ibs, 8.2); near(pr[3].icms, 1620); near(pr[3].ibs, 8200 * .0187);
+near(pr[7].icms, 0); near(pr[7].total, 8200 * .3);
+// Redução de 60%
+near(C.previsao(C.calcular({origem: 'SP', destino: 'SP', destinatario: 'revenda', produtos: 10000}), {reducao: .6})[7].total, 8200 * .3 * .4);
+console.log('ICMS previsão OK');

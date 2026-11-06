@@ -21,7 +21,7 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 
 ## Aba ICMS
 
-- `icms.js`: alíquota geral (modal) e FCP dos 27 estados em 2026 (Alagoas 20,5% desde 01/04/2026), alíquota interestadual automática (12%, 7% de Sul/Sudeste exceto ES para N/NE/CO/ES, 4% importados), ICMS por dentro com gross-up, IPI na base para consumidor final, redução de base, DIFAL (base dupla ou única; não contribuinte pela LC 190/2022 e Convênio 236/2021) com FCP, ICMS-ST com MVA ajustada (Convênio 142/2018) e projeção da extinção do ICMS (2029–2033). Alíquotas editáveis para produtos com alíquota própria.
+- `icms.js`: alíquota geral (modal) e FCP dos 27 estados em 2026 (Alagoas 20,5% desde 01/04/2026), alíquota interestadual automática (12%, 7% de Sul/Sudeste exceto ES para N/NE/CO/ES, 4% importados), ICMS por dentro com gross-up, IPI na base para consumidor final, redução de base, DIFAL (base dupla ou única; não contribuinte pela LC 190/2022 e Convênio 236/2021) com FCP, ICMS-ST com MVA ajustada (Convênio 142/2018) e previsão com a reforma ano a ano até 2033 (ICMS reduzido, PIS/COFINS até 2026, CBS e IBS por fora com referência e redução editáveis). Alíquotas editáveis para produtos com alíquota própria.
 
 ## Aba ITBI
 

@@ -6,6 +6,7 @@
  * Sem DOM: roda no navegador e no Node. */
 (function (raiz) {
   'use strict';
+  const M = typeof module === 'object' && module.exports ? require('./motor.js') : raiz.Motor;
 
   // interna: alíquota geral; fcp: adicional de fundo de pobreza aplicado em regra geral; ssExES: Sul/Sudeste, exceto ES (origem de 7% para N/NE/CO/ES)
   const UF = {
@@ -121,6 +122,27 @@
     return out;
   }
 
-  const api = {UF, interestadual, fatorReforma, calcular};
+  /* Previsão com a reforma até 2033 (EC 132/2023; LC 214/2025): a mesma operação ano a ano.
+   * ICMS (com FCP, DIFAL e ST) a 100% até 2028, 90/80/70/60% em 2029–2032 e zero em 2033; PIS/COFINS até 2026;
+   * CBS e IBS por fora, sobre o valor da operação sem ICMS e sem PIS/COFINS (LC 214/2025, art. 12, parágrafo 2º, e art. 13 a partir de 2027).
+   * p: {cbsRef, ibsRef, reducao (0, .3, .6, 1), pisCofins (.0365 | .0925 | 0)} */
+  function previsao(r, p) {
+    const cbsRef = p.cbsRef != null ? +p.cbsRef : .113, ibsRef = p.ibsRef != null ? +p.ibsRef : .187;
+    const red = Math.min(1, Math.max(0, +p.reducao || 0)), pc0 = Math.max(0, +p.pisCofins || 0);
+    const icmsBase = r.total;
+    const semICMS = Math.max(0, r.valorOp - r.icms - r.fcp); // valor da mercadoria sem o ICMS próprio
+    return [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033].map(ano => {
+      const f = fatorReforma(ano), ali = M.aliquotas(ano, cbsRef, ibsRef);
+      const icms = icmsBase * f;
+      const pisCofins = ano <= 2026 ? semICMS * pc0 : 0; // Tema 69 do STF: ICMS fora da base
+      const base = semICMS; // premissa: preço líquido da mercadoria constante; ICMS por dentro, CBS/IBS por fora
+      const cbs = base * ali.cbs * (1 - red), ibs = base * ali.ibs * (1 - red);
+      const teste = !!ali.teste;
+      const custo = icms + pisCofins + (teste ? 0 : cbs + ibs);
+      return {ano, base, fatorICMS: f, aliqCbs: ali.cbs * (1 - red), aliqIbs: ali.ibs * (1 - red), icms, pisCofins, cbs, ibs, teste, total: custo, pct: r.valorOp ? custo / r.valorOp : 0};
+    });
+  }
+
+  const api = {UF, interestadual, fatorReforma, calcular, previsao};
   if (typeof module === 'object' && module.exports) module.exports = api; else raiz.ICMS = api;
 })(typeof self !== 'undefined' ? self : this);
