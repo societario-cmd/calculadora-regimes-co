@@ -19,6 +19,8 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 
 - Compra e venda: base no valor declarado (STJ, Tema 1.113; CTN, art. 38 com a LC 227/2026), alíquota reduzida do SFH quando o município prevê, e o cenário de risco se a prefeitura exigir o valor de referência.
 - Integralização de capital: imunidade (CF, art. 156, parágrafo 2º, I) mesmo com atividade imobiliária preponderante (STF, Tema 1.348, 19/10/2026), limitada ao valor destinado ao capital (Tema 796); dois cenários (tese do contribuinte × prática de prefeituras), imóvel a imóvel.
+- Fusão, incorporação, cisão ou extinção: teste de atividade preponderante do CTN, art. 37 (mais de 50% da receita operacional com venda, locação ou arrendamento de imóveis nos 2 anos anteriores e 2 seguintes à aquisição, ou nos 3 seguintes para empresa nova; totalidade do patrimônio fora do teste). Na integralização o teste é só informativo (Tema 1.348). Lista de documentos para o pedido de reconhecimento da imunidade.
+- Custas de cartório (SP, 2026, Lei 11.331/2002): escritura (tabela do CNB/SP), registro (ARISP, Tabela II, item 1), registro da garantia, ISS informado sobre a parcela do tabelião/oficial e certidões; faixa pelo maior entre o valor do título e o valor venal. Integralização: só o registro da certidão da JUCESP, imóvel a imóvel. Outros estados: valores informados.
 - Municípios conferidos: Guarulhos (3%, Lei 8.425/2025), São Paulo (3%; 0,5% SFH até R$ 120.968 para imóvel até R$ 725.808) e São José dos Campos (2%; 0,5% SFH). Qualquer outro município: alíquotas informadas na tela.
 
 ## Consulta por CNPJ
@@ -37,7 +39,7 @@ template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
 cnae.js             enquadramento por CNAE e consulta de CNPJ
 construcao.js       módulo de construção e incorporação (RET, CPRB, redutores)
-itbi.js             módulo de ITBI (compra e integralização)
+itbi.js             módulo de ITBI (compra, integralização, reorganização, preponderância e custas de cartório)
 build.py            embute motor.js, cnae.js, construcao.js e itbi.js em template.html e gera index.html
 testes/             um teste por módulo (node testes/<nome>.test.js)
 ```

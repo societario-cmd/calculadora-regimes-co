@@ -482,6 +482,7 @@
       <select id="i-op">
         <option value="compra">Compra e venda, dação, arrematação</option>
         <option value="integralizacao">Integralização de capital (holding / conferência de bens)</option>
+        <option value="reorganizacao">Fusão, incorporação, cisão ou extinção de sociedade</option>
       </select>
       <label for="i-mun">Município</label>
       <select id="i-mun"></select>
@@ -517,17 +518,50 @@
       <input id="i-ref" type="number" min="0" step="1000" value="0">
       <div class="dica">Usado só para mostrar o risco, se a prefeitura exigir esse valor.</div>
     </div>
-    <div class="grupo" data-op="integralizacao" hidden>
-      <h3>Imóveis integralizados</h3>
+    <div class="grupo" data-op="integralizacao reorganizacao" hidden>
+      <h3>Imóveis transmitidos</h3>
       <div id="i-imoveis"></div>
       <button class="btn" type="button" id="i-add">+ Adicionar imóvel</button>
-      <div class="dica">Valor ao capital = quanto do capital social o imóvel integraliza. Valor transferido = valor pelo qual o imóvel entra na PJ (maior que o capital se houver reserva de capital). Mercado = avaliação ou valor de referência.</div>
+      <div class="dica">Valor ao capital = quanto do capital social o imóvel integraliza. Valor transferido = valor pelo qual o imóvel entra na PJ (maior que o capital se houver reserva de capital). Mercado = avaliação ou valor de referência. Venal = valor venal do IPTU, usado na faixa das custas de cartório.</div>
+    </div>
+    <div class="grupo" data-op="integralizacao reorganizacao" hidden>
+      <h3>Análise da atividade (imunidade)</h3>
+      <div class="linha2">
+        <div><label for="p-ano">Ano da aquisição pela PJ</label><input id="p-ano" type="number" min="1990" max="2100" step="1" value="2026"></div>
+        <div><label for="p-nova">Início da atividade</label><select id="p-nova"><option value="0">2 anos ou mais antes da aquisição</option><option value="1">Depois da aquisição ou há menos de 2 anos</option></select></div>
+      </div>
+      <label class="check" data-op="reorganizacao"><input id="p-tot" type="checkbox"> Transmissão da totalidade do patrimônio da PJ alienante (art. 37, parágrafo 4º)</label>
+      <div id="p-anos"></div>
+      <div class="dica">Receita operacional de cada ano (DRE) e a parte vinda de venda, locação ou arrendamento de imóveis. Deixe em branco os anos que ainda não terminaram.</div>
+    </div>
+    <div class="grupo">
+      <h3>Custas de cartório</h3>
+      <label for="c-tab">Tabela</label>
+      <select id="c-tab"><option value="SP2026">Estado de São Paulo — 2026</option><option value="manual">Outro estado (informar valores)</option></select>
+      <label class="check"><input id="c-esc" type="checkbox" checked> Lavrar escritura pública</label>
+      <div data-c="manual" hidden class="linha2">
+        <div><label for="c-mesc">Escritura (R$)</label><input id="c-mesc" type="number" min="0" step="10" value="0"></div>
+        <div><label for="c-mreg">Registro por imóvel (R$)</label><input id="c-mreg" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="c-iss">ISS sobre emolumentos (%)</label><input id="c-iss" type="number" min="0" max="5" step="0.5" value="2"></div>
+        <div><label for="c-cert">Certidões e despesas (R$)</label><input id="c-cert" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div data-op="compra">
+        <div class="linha2">
+          <div><label for="c-venal">Valor venal do IPTU (R$)</label><input id="c-venal" type="number" min="0" step="1000" value="0"></div>
+          <div><label for="c-gar">Financiamento com garantia (R$)</label><input id="c-gar" type="number" min="0" step="1000" value="0"></div>
+        </div>
+      </div>
+      <div class="dica">Faixa pelo maior entre o valor do título e o valor venal. ISS: 2% em São Paulo capital; confira a lei do município do cartório. Financiamento bancário: o contrato tem força de escritura (desmarque a escritura) e a garantia é registrada à parte.</div>
     </div>
   </form>
   <section>
     <div class="cartoes" id="i-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
     <div class="avisos" id="i-avisos"></div>
     <div class="secao painel" id="i-doc-wrap" hidden><h2>Dados lidos dos documentos — conferir</h2><div id="i-doc"></div></div>
+    <div class="secao painel" id="i-prep-wrap" hidden><h2>Análise da atividade — imunidade</h2><div id="i-prep"></div></div>
+    <div class="secao painel" id="i-cus-wrap"><h2>Custas de cartório (estimativa)</h2><div class="tabela-wrap"><table id="i-cus"></table></div><div class="dica" id="i-cus-fonte"></div></div>
     <div class="secao painel" id="i-tab-wrap" hidden><h2>Por imóvel</h2><div class="tabela-wrap"><table id="i-tabela"></table></div></div>
     <div class="secao">
       <h2>Memória e fundamentos</h2>
@@ -536,6 +570,8 @@
         <li>Incidência sobre transmissões onerosas de imóveis entre vivos (CF, art. 156, II; CTN, art. 35). O fato gerador é o registro do título; a LC 227/2026 permite à lei municipal antecipar o pagamento.</li>
         <li>Base de cálculo: valor da transação declarado, presumido verdadeiro; a prefeitura só pode afastá-lo em processo administrativo próprio (STJ, Tema 1.113). A LC 227/2026 alterou o art. 38 do CTN para prever valor de referência, mas o TJSP tem mantido o valor declarado sem esse processo.</li>
         <li>Integralização de capital: imune (CF, art. 156, parágrafo 2º, I), inclusive para empresa de atividade imobiliária preponderante (STF, Tema 1.348, julgado em 19/10/2026), até o valor destinado ao capital (STF, Tema 796).</li>
+        <li>Atividade preponderante (CTN, art. 37): mais de 50% da receita operacional com venda, locação ou arrendamento de imóveis nos 2 anos anteriores e 2 seguintes à aquisição, ou nos 3 seguintes se a atividade começou depois ou há menos de 2 anos. Desde o Tema 1.348, só afasta a imunidade em fusão, incorporação, cisão e extinção. A transmissão com a totalidade do patrimônio fica fora do teste (parágrafo 4º).</li>
+        <li>Custas em SP: Lei Estadual 11.331/2002, tabelas de 2026 do CNB/SP (notas) e da ARISP (registro). Na integralização, o título é a certidão da JUCESP (Lei 8.934/1994, art. 64), sem escritura. Primeira aquisição pelo SFH tem redução de 50% nos emolumentos (Lei 6.015/1973, art. 290), não aplicada aqui.</li>
         <li>Municípios com regras conferidas: Guarulhos, São Paulo e São José dos Campos. Para os demais, informe as alíquotas da lei municipal vigente.</li>
       </ul></details>
     </div>
@@ -967,9 +1003,10 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
     v = v || {};
     const d = document.createElement('div'); d.className = 'imovel'; d.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px';
     d.innerHTML = '<input class="im-desc" type="text" placeholder="Descrição / matrícula" value="' + esc(v.descricao || '') + '">' +
-      '<div class="linha2" style="grid-template-columns:1fr 1fr 1fr"><div><label>Ao capital</label><input class="im-cap" type="number" min="0" step="1000" value="' + (v.valorCapital || 0) + '"></div>' +
+      '<div class="linha2" style="grid-template-columns:1fr 1fr"><div><label>Ao capital</label><input class="im-cap" type="number" min="0" step="1000" value="' + (v.valorCapital || 0) + '"></div>' +
       '<div><label>Transferido</label><input class="im-tr" type="number" min="0" step="1000" value="' + (v.valorTransferido || 0) + '"></div>' +
-      '<div><label>Mercado</label><input class="im-mer" type="number" min="0" step="1000" value="' + (v.valorMercado || 0) + '"></div></div>' +
+      '<div><label>Mercado</label><input class="im-mer" type="number" min="0" step="1000" value="' + (v.valorMercado || 0) + '"></div>' +
+      '<div><label>Venal</label><input class="im-ven" type="number" min="0" step="1000" value="' + (v.valorVenal || 0) + '"></div></div>' +
       '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
     d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
     $('i-imoveis').appendChild(d);
@@ -981,12 +1018,55 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
     const n = id => parseFloat($(id).value) || 0;
     return {municipio: $('i-mun').value, nomeMunicipio: $('i-nome').value, aliquota: n('i-aliq') / 100, aliqSfh: n('i-aliqsfh') / 100, limFinSfh: n('i-limfin'), limImovelSfh: n('i-limimo'),
       valorDeclarado: n('i-decl'), financiadoSfh: n('i-fin'), valorReferencia: n('i-ref'),
-      imoveis: [...document.querySelectorAll('#i-imoveis .imovel')].map(d => ({descricao: d.querySelector('.im-desc').value, valorCapital: +d.querySelector('.im-cap').value || 0, valorTransferido: +d.querySelector('.im-tr').value || 0, valorMercado: +d.querySelector('.im-mer').value || 0}))};
+      imoveis: [...document.querySelectorAll('#i-imoveis .imovel')].map(d => ({descricao: d.querySelector('.im-desc').value, valorCapital: +d.querySelector('.im-cap').value || 0, valorTransferido: +d.querySelector('.im-tr').value || 0, valorMercado: +d.querySelector('.im-mer').value || 0, valorVenal: +d.querySelector('.im-ven').value || 0})),
+      nova: $('p-nova').value === '1', totalidade: $('p-tot').checked,
+      anos: [...document.querySelectorAll('#p-anos .p-ano')].map(d => ({rotulo: d.dataset.rotulo, receitaTotal: +d.querySelector('.p-rt').value || 0, receitaImob: +d.querySelector('.p-ri').value || 0}))};
   }
+const ANOS = {};
+  function montarAnos() {
+    const a = parseInt($('p-ano').value, 10) || 2026, nova = $('p-nova').value === '1';
+    document.querySelectorAll('#p-anos .p-ano').forEach(d => { ANOS[d.dataset.rotulo] = [d.querySelector('.p-rt').value, d.querySelector('.p-ri').value]; });
+    const rot = nova ? [a + 1, a + 2, a + 3] : [a - 2, a - 1, a + 1, a + 2];
+    $('p-anos').innerHTML = '<div class="linha2" style="grid-template-columns:70px 1fr 1fr;font-size:12px;color:var(--muted)"><div>Ano</div><div>Receita operacional</div><div>Receita imobiliária</div></div>' +
+      rot.map(r => { const v = ANOS[r] || ['', '']; return '<div class="p-ano linha2" data-rotulo="' + r + '" style="grid-template-columns:70px 1fr 1fr;align-items:center"><div>' + r + '</div><input class="p-rt" type="number" min="0" step="1000" value="' + esc(v[0]) + '"><input class="p-ri" type="number" min="0" step="1000" value="' + esc(v[1]) + '"></div>'; }).join('');
+  }
+  montarAnos();
+  $('p-ano').addEventListener('change', () => { montarAnos(); render(); });
+  $('p-nova').addEventListener('change', () => { montarAnos(); render(); });
+  let opAnterior = $('i-op').value;
+  function mostrarPrep(p, op) {
+    const pc = v => v === null ? '—' : (v * 100).toFixed(1).replace('.', ',') + '%';
+    const st = p.imune === true ? '<b style="color:#1a7f37">Imune</b>' : p.imune === false ? '<b style="color:#b42318">Não imune — ITBI devido</b>' : '<b>Pendente</b>';
+    let h = '<p>' + st + ' — ' + esc(p.conclusao) + '</p>';
+    if (p.anos.some(a => a.total > 0)) h += '<div class="tabela-wrap"><table><thead><tr><th>Ano</th><th>Receita operacional</th><th>Receita imobiliária</th><th>%</th></tr></thead><tbody>' +
+      p.anos.map(a => '<tr><td>' + esc(a.rotulo) + '</td><td>' + (a.total ? brl(a.total) : '—') + '</td><td>' + (a.total ? brl(a.imob) : '—') + '</td><td>' + pc(a.pct) + '</td></tr>').join('') +
+      '<tr class="total"><td>Período</td><td>' + brl(p.somaT) + '</td><td>' + brl(p.somaI) + '</td><td>' + pc(p.pct) + (p.pct === null ? '' : p.preponderante ? ' — preponderante' : ' — não preponderante') + '</td></tr></tbody></table></div>';
+    h += p.avisos.map(a => '<div class="aviso" style="margin-top:8px">' + esc(a) + '</div>').join('');
+    h += '<details style="margin-top:10px"' + (op === 'integralizacao' ? '' : ' open') + '><summary>Documentos para o pedido de reconhecimento da imunidade</summary><ul>' + I.DOCUMENTOS_IMUNIDADE.map(d => '<li>' + esc(d) + '</li>').join('') +
+      '<li>O pedido administrativo pode ser feito pela empresa ou pelo escritório. Mandado de segurança, ação declaratória ou repetição de indébito exigem advogado com OAB.</li></ul></details>';
+    $('i-prep').innerHTML = h; $('i-prep-wrap').hidden = false;
+  }
+  function mostrarCustas(e, op, itbi) {
+    const n = id => parseFloat($(id).value) || 0;
+    const ce = {tabela: $('c-tab').value, escritura: $('c-esc').checked, issPct: n('c-iss') / 100, certidoes: n('c-cert'), manualEscritura: n('c-mesc'), manualRegistro: n('c-mreg')};
+    if (op === 'compra') Object.assign(ce, {valorTitulo: e.valorDeclarado, valorVenal: n('c-venal'), garantia: n('c-gar')});
+    else ce.imoveis = e.imoveis.filter(i => i.valorCapital || i.valorTransferido || i.valorMercado || i.valorVenal).map(i => ({descricao: i.descricao, valorTitulo: Math.max(i.valorTransferido, i.valorCapital), valorVenal: i.valorVenal}));
+    const c = I.custas(ce);
+    $('i-cus').innerHTML = '<thead><tr><th>Ato</th><th>Base (faixa)</th><th>Emolumentos e repasses</th><th>ISS</th><th>Total</th></tr></thead><tbody>' +
+      c.itens.map(i => '<tr><td>' + esc(i.ato) + '</td><td>' + (i.base ? brl(i.base) + (i.faixa ? ' (faixa ' + (i.faixa.ate === null ? 'final' : 'até ' + brl(i.faixa.ate)) + ')' : '') : '—') + '</td><td>' + brl(i.emolumentos) + '</td><td>' + brl(i.iss) + '</td><td>' + brl(i.total) + '</td></tr>').join('') +
+      '<tr class="total"><td>Custas de cartório</td><td></td><td></td><td></td><td>' + brl(c.total) + '</td></tr>' +
+      '<tr class="total"><td>ITBI + custas (custo da transferência)</td><td></td><td></td><td></td><td>' + brl(c.total + itbi) + '</td></tr></tbody>';
+    $('i-cus-fonte').textContent = 'Fonte: ' + c.fonte + (c.issPct ? ' ISS de ' + (c.issPct * 100).toFixed(1).replace('.', ',') + '% sobre a parcela do tabelião/oficial.' : '') + ' Não inclui prenotação de título devolvido, diligências, buscas e certidões não informadas.' + (c.avisos.length ? ' ' + c.avisos.join(' ') : '');
+  }
+  
   const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
   function render() {
-    const op = $('i-op').value, e = ler();
-    document.querySelectorAll('#form-itbi [data-op]').forEach(g => { g.hidden = g.dataset.op !== op; });
+    const op = $('i-op').value;
+    if (op !== opAnterior) { $('c-esc').checked = op === 'compra'; opAnterior = op; }
+    const e = ler();
+    document.querySelectorAll('#form-itbi [data-op]').forEach(g => { g.hidden = !g.dataset.op.split(' ').includes(op); });
+    document.querySelector('#form-itbi [data-c]').hidden = $('c-tab').value !== 'manual';
+    $('i-prep-wrap').hidden = true;
     document.querySelector('#form-itbi [data-mun]').hidden = e.municipio !== 'outro';
     if (op === 'compra') {
       const r = I.compra(e);
@@ -996,7 +1076,21 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
       $('i-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
       $('i-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
       $('i-tab-wrap').hidden = true;
+      mostrarCustas(e, op, r.devido.total);
+    } else if (op === 'reorganizacao') {
+      const r = I.reorganizacao(e), t = r.totais, p = r.preponderancia;
+      $('i-cartoes').innerHTML = card('ITBI devido', p.imune === null ? '—' : brl(r.devido), p.imune === true ? 'imune (CTN, arts. 36 e 37)' : p.imune === false ? 'atividade imobiliária preponderante' : 'informe as receitas', true) +
+        card('Se não houver imunidade', brl(t.itbiDecl), 'sobre o valor transmitido') +
+        card('Pelo valor de mercado', brl(t.itbiMerc), 'se a prefeitura arbitrar');
+      $('i-tabela').innerHTML = '<thead><tr><th>Imóvel</th><th>Valor transmitido</th><th>Mercado</th><th>ITBI sem imunidade</th></tr></thead><tbody>' +
+        r.linhas.map(l => '<tr><td>' + esc(l.descricao) + '</td><td>' + brl(l.valor) + '</td><td>' + brl(l.merc) + '</td><td>' + brl(l.itbiDecl) + '</td></tr>').join('') + '</tbody>';
+      $('i-tab-wrap').hidden = !r.linhas.length;
+      $('i-memoria').innerHTML = p.memoria.concat(['Alíquota de ' + r.municipio.nome + ': ' + (r.municipio.aliquota * 100).toFixed(2).replace('.', ',') + '% (' + r.municipio.fonte + ').']).map(m => '<li>' + esc(m) + '</li>').join('');
+      $('i-avisos').innerHTML = '';
+      mostrarPrep(p, op);
+      mostrarCustas(e, op, r.devido);
     } else {
+
       const r = I.integralizacao(e), t = r.totais;
       $('i-cartoes').innerHTML = card('Cenário 1 — tese do contribuinte', brl(t.itbiContrib), 'excesso sobre o capital (Temas 796 e 1.348)', true) +
         card('Cenário 2 — prática de prefeituras', brl(t.itbiFisco), 'diferença para o valor de mercado') +
@@ -1007,6 +1101,8 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
       $('i-tab-wrap').hidden = !r.linhas.length;
       $('i-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
       $('i-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+      mostrarPrep(I.preponderancia(Object.assign({}, e, {operacao: 'integralizacao'})), op);
+      mostrarCustas(e, op, t.itbiContrib);
     }
   }
   // Documentos do imóvel
@@ -1041,13 +1137,13 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
     $('i-doc').innerHTML = '<div class="tabela-wrap"><table><tbody>' + linhas.join('') + '</tbody></table></div>' +
       avisos.map(a => '<div class="aviso" style="margin-top:8px">' + esc(a) + '</div>').join('') + (bt ? '<div style="margin-top:10px">' + bt + '</div>' : '');
     $('i-doc-wrap').hidden = !(m || v);
-    const b1 = $('i-usaref'); if (b1) b1.addEventListener('click', () => { $('i-op').value = 'compra'; $('i-ref').value = Math.round(ref * 100) / 100; render(); });
+    const b1 = $('i-usaref'); if (b1) b1.addEventListener('click', () => { $('i-op').value = 'compra'; $('i-ref').value = Math.round(ref * 100) / 100; if (v && v.campos.valorVenal) $('c-venal').value = Math.round(v.campos.valorVenal * 100) / 100; render(); });
     const b2 = $('i-usaint'); if (b2) b2.addEventListener('click', () => {
       $('i-op').value = 'integralizacao';
       const desc = 'Matrícula ' + ((m && m.campos.matricula) || '?') + ((m && m.campos.endereco) ? ' — ' + m.campos.endereco : '');
       const prim = document.querySelector('#i-imoveis .imovel .im-desc');
       if (prim && prim.value === 'Imóvel 1' && document.querySelectorAll('#i-imoveis .imovel').length === 1) prim.closest('.imovel').remove();
-      linhaImovel({descricao: desc, valorCapital: 0, valorTransferido: 0, valorMercado: Math.round(merc)}); render();
+      linhaImovel({descricao: desc, valorCapital: 0, valorTransferido: 0, valorMercado: Math.round(merc), valorVenal: v && v.campos.valorVenal ? Math.round(v.campos.valorVenal) : 0}); render();
     });
   }
   async function lerDoc(input, tipo) {
