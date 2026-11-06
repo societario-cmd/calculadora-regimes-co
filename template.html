@@ -115,6 +115,7 @@
 <nav class="abas" role="tablist">
   <button type="button" role="tab" data-aba="geral" aria-selected="true">Regimes gerais</button>
   <button type="button" role="tab" data-aba="obra" aria-selected="false">Construção e Incorporação</button>
+  <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
 </nav>
 
 <main id="aba-geral">
@@ -361,6 +362,66 @@
   </section>
 </main>
 
+<main id="aba-itbi" hidden>
+  <form class="painel" id="form-itbi" autocomplete="off">
+    <h2>ITBI</h2>
+    <div class="grupo">
+      <h3>Operação e município</h3>
+      <label for="i-op">Operação</label>
+      <select id="i-op">
+        <option value="compra">Compra e venda, dação, arrematação</option>
+        <option value="integralizacao">Integralização de capital (holding / conferência de bens)</option>
+      </select>
+      <label for="i-mun">Município</label>
+      <select id="i-mun"></select>
+      <div data-mun="outro" hidden>
+        <label for="i-nome">Nome do município</label>
+        <input id="i-nome" type="text" placeholder="Cidade/UF">
+        <div class="linha2">
+          <div><label for="i-aliq">Alíquota geral (%)</label><input id="i-aliq" type="number" min="0" max="10" step="0.1" value="2"></div>
+          <div><label for="i-aliqsfh">Alíquota SFH (%)</label><input id="i-aliqsfh" type="number" min="0" max="10" step="0.1" value="0"></div>
+        </div>
+        <div class="linha2">
+          <div><label for="i-limfin">Limite financiado SFH (R$)</label><input id="i-limfin" type="number" min="0" step="1000" value="0"></div>
+          <div><label for="i-limimo">Limite do imóvel SFH (R$)</label><input id="i-limimo" type="number" min="0" step="1000" value="0"></div>
+        </div>
+        <div class="dica">Deixe a alíquota SFH em 0 se o município não tiver redução. Limites em 0 = sem limite.</div>
+      </div>
+    </div>
+    <div class="grupo" data-op="compra">
+      <h3>Transação</h3>
+      <label for="i-decl">Valor da transação declarado (R$)</label>
+      <input id="i-decl" type="number" min="0" step="1000" value="500000">
+      <label for="i-fin">Valor financiado pelo SFH (R$)</label>
+      <input id="i-fin" type="number" min="0" step="1000" value="0">
+      <label for="i-ref">Valor venal de referência da prefeitura (R$, opcional)</label>
+      <input id="i-ref" type="number" min="0" step="1000" value="0">
+      <div class="dica">Usado só para mostrar o risco, se a prefeitura exigir esse valor.</div>
+    </div>
+    <div class="grupo" data-op="integralizacao" hidden>
+      <h3>Imóveis integralizados</h3>
+      <div id="i-imoveis"></div>
+      <button class="btn" type="button" id="i-add">+ Adicionar imóvel</button>
+      <div class="dica">Valor ao capital = quanto do capital social o imóvel integraliza. Valor transferido = valor pelo qual o imóvel entra na PJ (maior que o capital se houver reserva de capital). Mercado = avaliação ou valor de referência.</div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="i-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="i-avisos"></div>
+    <div class="secao painel" id="i-tab-wrap" hidden><h2>Por imóvel</h2><div class="tabela-wrap"><table id="i-tabela"></table></div></div>
+    <div class="secao">
+      <h2>Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="i-memoria"></ul></details>
+      <details><summary>Regras nacionais aplicadas</summary><ul>
+        <li>Incidência sobre transmissões onerosas de imóveis entre vivos (CF, art. 156, II; CTN, art. 35). O fato gerador é o registro do título; a LC 227/2026 permite à lei municipal antecipar o pagamento.</li>
+        <li>Base de cálculo: valor da transação declarado, presumido verdadeiro; a prefeitura só pode afastá-lo em processo administrativo próprio (STJ, Tema 1.113). A LC 227/2026 alterou o art. 38 do CTN para prever valor de referência, mas o TJSP tem mantido o valor declarado sem esse processo.</li>
+        <li>Integralização de capital: imune (CF, art. 156, parágrafo 2º, I), inclusive para empresa de atividade imobiliária preponderante (STF, Tema 1.348, julgado em 19/10/2026), até o valor destinado ao capital (STF, Tema 796).</li>
+        <li>Municípios com regras conferidas: Guarulhos, São Paulo e São José dos Campos. Para os demais, informe as alíquotas da lei municipal vigente.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
 <footer>
   Estimativa para apoio ao estudo tributário; não substitui o parecer. Parâmetros conferidos em <span id="versao"></span>. Controller & Oraculu's — Rua Antônio Abude, 14, Jd. Barbosa, Guarulhos/SP · (11) 2087-6740 · www.controller-oraculus.com.br
 </footer>
@@ -373,6 +434,9 @@
 </script>
 <script>
 /*CONSTRUCAO*/
+</script>
+<script>
+/*ITBI*/
 </script>
 <script>
 (function () {
@@ -664,8 +728,7 @@
   // Abas
   document.querySelectorAll('.abas button').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('.abas button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
-    $('aba-geral').hidden = b.dataset.aba !== 'geral';
-    $('aba-obra').hidden = b.dataset.aba !== 'obra';
+    document.querySelectorAll('main[id^="aba-"]').forEach(m => { m.hidden = m.id !== 'aba-' + b.dataset.aba; });
     if (b.dataset.aba === 'obra') render();
   }));
 
@@ -752,6 +815,67 @@
   const ir = document.getElementById('ir-obra');
   if (ir) ir.addEventListener('click', () => { if (geral.value === 'incorporacao') $('o-tipo').value = 'incorporacao'; else $('o-tipo').value = 'construtora'; document.querySelector('.abas button[data-aba="obra"]').click(); });
   sugerir();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const I = window.ITBI;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  Object.entries(I.MUNICIPIOS).forEach(([k, m]) => { const o = document.createElement('option'); o.value = k; o.textContent = m.nome; $('i-mun').appendChild(o); });
+  function linhaImovel(v) {
+    v = v || {};
+    const d = document.createElement('div'); d.className = 'imovel'; d.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px';
+    d.innerHTML = '<input class="im-desc" type="text" placeholder="Descrição / matrícula" value="' + esc(v.descricao || '') + '">' +
+      '<div class="linha2" style="grid-template-columns:1fr 1fr 1fr"><div><label>Ao capital</label><input class="im-cap" type="number" min="0" step="1000" value="' + (v.valorCapital || 0) + '"></div>' +
+      '<div><label>Transferido</label><input class="im-tr" type="number" min="0" step="1000" value="' + (v.valorTransferido || 0) + '"></div>' +
+      '<div><label>Mercado</label><input class="im-mer" type="number" min="0" step="1000" value="' + (v.valorMercado || 0) + '"></div></div>' +
+      '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
+    d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
+    $('i-imoveis').appendChild(d);
+  }
+  linhaImovel({descricao: 'Imóvel 1', valorCapital: 300000, valorTransferido: 300000, valorMercado: 900000});
+  $('i-add').addEventListener('click', () => { linhaImovel(); render(); });
+
+  function ler() {
+    const n = id => parseFloat($(id).value) || 0;
+    return {municipio: $('i-mun').value, nomeMunicipio: $('i-nome').value, aliquota: n('i-aliq') / 100, aliqSfh: n('i-aliqsfh') / 100, limFinSfh: n('i-limfin'), limImovelSfh: n('i-limimo'),
+      valorDeclarado: n('i-decl'), financiadoSfh: n('i-fin'), valorReferencia: n('i-ref'),
+      imoveis: [...document.querySelectorAll('#i-imoveis .imovel')].map(d => ({descricao: d.querySelector('.im-desc').value, valorCapital: +d.querySelector('.im-cap').value || 0, valorTransferido: +d.querySelector('.im-tr').value || 0, valorMercado: +d.querySelector('.im-mer').value || 0}))};
+  }
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  function render() {
+    const op = $('i-op').value, e = ler();
+    document.querySelectorAll('#form-itbi [data-op]').forEach(g => { g.hidden = g.dataset.op !== op; });
+    document.querySelector('#form-itbi [data-mun]').hidden = e.municipio !== 'outro';
+    if (op === 'compra') {
+      const r = I.compra(e);
+      $('i-cartoes').innerHTML = card('ITBI devido (valor declarado)', brl(r.devido.total), esc(r.municipio.nome), true) +
+        card('Base de cálculo', brl(r.devido.base), r.devido.faixaReduzida ? 'com ' + brl(r.devido.faixaReduzida) + ' na alíquota do SFH' : 'alíquota ' + (r.municipio.aliquota * 100).toFixed(2).replace('.', ',') + '%') +
+        (r.cenarioPrefeitura ? card('Se exigirem o valor de referência', brl(r.cenarioPrefeitura.total), '+' + brl(r.cenarioPrefeitura.total - r.devido.total)) : card('Valor de referência', '—', 'não informado ou menor que o declarado'));
+      $('i-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+      $('i-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+      $('i-tab-wrap').hidden = true;
+    } else {
+      const r = I.integralizacao(e), t = r.totais;
+      $('i-cartoes').innerHTML = card('Cenário 1 — tese do contribuinte', brl(t.itbiContrib), 'excesso sobre o capital (Temas 796 e 1.348)', true) +
+        card('Cenário 2 — prática de prefeituras', brl(t.itbiFisco), 'diferença para o valor de mercado') +
+        card('Capital integralizado', brl(t.cap), 'mercado: ' + brl(t.merc));
+      $('i-tabela').innerHTML = '<thead><tr><th>Imóvel</th><th>Ao capital</th><th>Transferido</th><th>Mercado</th><th>ITBI cenário 1</th><th>ITBI cenário 2</th></tr></thead><tbody>' +
+        r.linhas.map(l => '<tr><td>' + esc(l.descricao) + '</td><td>' + brl(l.cap) + '</td><td>' + brl(l.transf) + '</td><td>' + brl(l.merc) + '</td><td>' + brl(l.itbiContrib) + '</td><td>' + brl(l.itbiFisco) + '</td></tr>').join('') +
+        '<tr class="total"><td>Total</td><td>' + brl(t.cap) + '</td><td>' + brl(t.transf) + '</td><td>' + brl(t.merc) + '</td><td>' + brl(t.itbiContrib) + '</td><td>' + brl(t.itbiFisco) + '</td></tr></tbody>';
+      $('i-tab-wrap').hidden = !r.linhas.length;
+      $('i-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+      $('i-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    }
+  }
+  $('form-itbi').addEventListener('input', render);
+  $('form-itbi').addEventListener('change', render);
+  $('form-itbi').addEventListener('submit', ev => ev.preventDefault());
+  render();
 })();
 </script>
 </body>

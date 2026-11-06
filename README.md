@@ -15,6 +15,12 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 - INSS da obra por aferição no Sero (IN RFB 2.021/2021): RMT = área × equivalência × VAU × 20%/15%/12%, menos a remuneração comprovada, × 36,8% (ajustável). Redutor de ajuste corrigido pelo IPCA informado.
 - Construtora (empreitada): retenções na fonte (INSS 11% ou 3,5% com CPRB; ISS) como antecipação de caixa; CPP × CPRB na transição da Lei 14.973/2024 (2026: 2,7% da receita + 10% da folha; 2027: 1,8% + 15%; 2028: CPP cheia), CBS/IBS com redução de 50% e crédito dos materiais, ISS com dedução de materiais, presunção 8%/12% ou 32%, e Simples Anexo IV.
 
+## Aba ITBI
+
+- Compra e venda: base no valor declarado (STJ, Tema 1.113; CTN, art. 38 com a LC 227/2026), alíquota reduzida do SFH quando o município prevê, e o cenário de risco se a prefeitura exigir o valor de referência.
+- Integralização de capital: imunidade (CF, art. 156, parágrafo 2º, I) mesmo com atividade imobiliária preponderante (STF, Tema 1.348, 19/10/2026), limitada ao valor destinado ao capital (Tema 796); dois cenários (tese do contribuinte × prática de prefeituras), imóvel a imóvel.
+- Municípios conferidos: Guarulhos (3%, Lei 8.425/2025), São Paulo (3%; 0,5% SFH até R$ 120.968 para imóvel até R$ 725.808) e São José dos Campos (2%; 0,5% SFH). Qualquer outro município: alíquotas informadas na tela.
+
 ## Consulta por CNPJ
 
 Informe o CNPJ e clique em Buscar: a página consulta a base pública da Receita Federal (BrasilAPI, com a publica.cnpj.ws como reserva), traz razão social, situação, regime atual, CNAE principal e secundários, e já preenche a atividade, o anexo do Simples, o Fator R e a redução de CBS/IBS sugerida. Sem internet, ou num ambiente que bloqueie a consulta, basta digitar o CNAE principal.
@@ -31,14 +37,15 @@ template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
 cnae.js             enquadramento por CNAE e consulta de CNPJ
 construcao.js       módulo de construção e incorporação (RET, CPRB, redutores)
-build.py            embute motor.js, cnae.js e construcao.js em template.html e gera index.html
-testes/             node testes/motor.test.js, cnae.test.js e construcao.test.js
+itbi.js             módulo de ITBI (compra e integralização)
+build.py            embute motor.js, cnae.js, construcao.js e itbi.js em template.html e gera index.html
+testes/             um teste por módulo (node testes/<nome>.test.js)
 ```
 
 ## Como alterar
 
 1. Edite `motor.js` (parâmetros e regras) ou `template.html` (tela).
-2. Rode os três testes em `testes/`.
+2. Rode todos os testes em `testes/`.
 3. Rode `python3 build.py` para gerar o `index.html`.
 
 ## Parâmetros (conferidos em 05/11/2026)
