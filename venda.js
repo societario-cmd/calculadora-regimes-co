@@ -136,7 +136,13 @@
         if (residencial && +im.reinvest > 0) base *= 1 - Math.min(1, +im.reinvest);
         const imp = impostoGC(base);
         ir += imp;
-        out.porImovel[k] = {descricao: im.descricao, valor: +im.valor || 0, ganhoPF: ganho, basePF: base, irPF: imp};
+        out.porImovel[k] = {descricao: im.descricao, valor: +im.valor || 0, ganhoPF: ganho, basePF: base, irPF: imp, permuta: !!im.permuta};
+        if (im.permuta) {
+          // Custo do imóvel recebido = custo do dado menos a parcela baixada pela torna (IN SRF 84/2001; IN SRF 107/1988)
+          const custoRec = (+im.custo || 0) * (1 - im._prop), contRec = (im.contabil != null && im.contabil !== '' ? +im.contabil : (+im.custo || 0)) * (1 - im._prop);
+          Object.assign(out.porImovel[k], {recebido: +im.recebido || 0, torna: +im.torna || 0, municipioRecebido: im.municipioRecebido || '',
+            custoRecebidoPF: custoRec, custoRecebidoPJ: e.permutaRiscoRFB ? (+im.recebido || 0) : contRec});
+        }
         mem.push(memo(im.descricao + (im.permuta ? ' — permuta: ganho = torna − custo × ' + (im._prop * 100).toFixed(2).replace('.', ',') + '% (torna ÷ torna + imóvel recebido)' + (+im.torna ? '' : '; sem torna, não há ganho tributável') : ' — ganho de capital (venda' + (corr ? ' − corretagem' : '') + ' − custo)'), ganho));
         if (f.red7713) mem.push(memo('Redução da Lei 7.713/1988, art. 18 (aquisição em ' + String(im.aquisicao).slice(0, 4) + '): ' + Math.round(f.red7713 * 100) + '%', null));
         mem.push(memo('FR1 = 1/1,0060^' + f.m1 + ' = ' + f.fr1.toFixed(6).replace('.', ',') + '; FR2 = 1/1,0035^' + f.m2 + ' = ' + f.fr2.toFixed(6).replace('.', ',') + ' (Lei 11.196/2005, art. 40)', null));
@@ -224,7 +230,7 @@
     if (ims.some(i => idx(i.aquisicao) >= idx('2027-01'))) out.avisos.push('Imóvel adquirido a partir de 2027: o redutor de ajuste é o valor da aquisição corrigido (art. 258, III), limitado nas revendas em menos de 3 anos sem comprovação de IR/ITBI (art. 258, parágrafo 5º).');
     if (ims.some(i => i.permuta)) out.avisos.push(e.permutaRiscoRFB
       ? 'Permuta — cenário de risco: o imóvel recebido entra como receita da PJ (entendimento antigo da Receita para o Presumido). O STJ e o CARF afastam essa cobrança, e a Receita passou a tributar só a torna (SC COSIT 99/2024).'
-      : 'Permuta: PJ e PF tributam só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; para o Presumido, STJ e SC COSIT 99/2024). CBS/IBS só sobre a torna (LC 214, art. 252). O imóvel recebido fica com o custo do imóvel dado; cada transmissão paga ITBI. "Fica com o vendedor" mostra só o dinheiro.');
+      : 'Permuta: PJ e PF tributam só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; para o Presumido, STJ e SC COSIT 99/2024). CBS/IBS só sobre a torna (LC 214, art. 252). O imóvel recebido fica com o custo do imóvel dado, menos a parcela baixada pela torna; cada permutante paga o ITBI do imóvel que adquire (veja as linhas de ITBI e de patrimônio na tabela).');
     if (corrT) out.avisos.push('Corretagem: reduz o ganho da PF e é despesa no Lucro Real; no Presumido não é dedutível. A partir de 2027, a CBS/IBS cobrada na corretagem dá crédito à PJ contribuinte (não considerado aqui).');
     if (e.distribuir) out.avisos.push('O IRRF de 10% sobre lucros é antecipação do imposto mínimo anual (IRPFM) do sócio; distribuições até R$ 50 mil por mês por sócio não têm retenção. Na PF a comparação considera só o IR de ganho de capital.');
     out.receita = Rt; out.custo = custoT; out.valorTotal = ims.reduce((a, i) => a + (+i.valor || 0), 0);

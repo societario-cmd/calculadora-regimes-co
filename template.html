@@ -390,7 +390,7 @@
         <div><label for="v-vista">PF: % do preço recebido no mês da venda</label><input id="v-vista" type="number" min="0" max="100" step="5" value="100"></div>
         <div><label for="v-prej">PJ Real: prejuízo fiscal a compensar (R$)</label><input id="v-prej" type="number" min="0" step="1000" value="0"></div>
       </div>
-      <label for="v-mun">ITBI do comprador (informativo)</label>
+      <label for="v-mun">Município dos imóveis vendidos ou dados (ITBI, informativo)</label>
       <select id="v-mun"><option value="">Não calcular</option></select>
       <label class="check"><input id="v-trim" type="checkbox" checked> Venda concentrada num único trimestre (adicional de IRPJ acima de R$ 60 mil)</label>
       <label class="check"><input id="v-dist" type="checkbox" checked> Distribuir o lucro aos sócios no mês (IRRF de 10% — Lei 15.270/2025)</label>
@@ -971,10 +971,12 @@
       '<div class="linha2">' + campo('vi-488', 'Custos 2027–2032 c/ ICMS/ISS', 'number', v.ded488 || 0) + campo('vi-rein', 'PF: % reinvestido em 180 dias', 'number', v.reinvest || 0, 'min="0" max="100" step="5"') + '</div>' +
       '<div class="linha2">' + campo('vi-corr', 'Corretagem paga pelo vendedor', 'number', v.corretagem || 0) + '<div><label>Operação</label><select class="vi-op"><option value="venda">Venda</option><option value="permuta">Permuta</option></select></div></div>' +
       '<div class="linha2 vi-perm" hidden>' + campo('vi-receb', 'Imóvel recebido em permuta (valor)', 'number', v.recebido || 0) + campo('vi-torna', 'Torna recebida em dinheiro', 'number', v.torna || 0) + '</div>' +
+      '<div class="vi-perm" hidden><label>Município do imóvel recebido (ITBI que o cliente paga)</label><select class="vi-munrec"><option value="">Mesmo dos imóveis dados</option>' + Object.entries(window.ITBI.MUNICIPIOS).filter(([k]) => k !== 'outro').map(([k, m]) => '<option value="' + k + '">' + esc(m.nome) + '</option>').join('') + '</select></div>' +
       '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
     d.querySelector('.vi-tipo').value = v.tipo || 'usado';
     d.querySelector('.vi-op').value = v.permuta ? 'permuta' : 'venda';
-    const sincr = () => { d.querySelector('.vi-perm').hidden = d.querySelector('.vi-op').value !== 'permuta'; };
+    if (v.municipioRecebido) d.querySelector('.vi-munrec').value = v.municipioRecebido;
+    const sincr = () => { d.querySelectorAll('.vi-perm').forEach(x => { x.hidden = d.querySelector('.vi-op').value !== 'permuta'; }); };
     d.querySelector('.vi-op').addEventListener('change', sincr); sincr();
     d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
     $('v-imoveis').appendChild(d);
@@ -985,7 +987,7 @@
     const n = id => parseFloat($(id).value) || 0;
     return {venda: $('v-data').value || '2027-06', socios: n('v-socios'), cbsRef: n('v-cbs') / 100, ibsRef: n('v-ibs') / 100, classificacao: $('v-class').value,
       trimestral: $('v-trim').checked, distribuir: $('v-dist').checked, precoComTributo: $('v-comtrib').checked, pfContribuinte: $('v-pfcontrib').checked, unico440: $('v-unico').checked,
-      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100, corretagem: +q('.vi-corr') || 0, permuta: q('.vi-op') === 'permuta', recebido: +q('.vi-receb') || 0, torna: +q('.vi-torna') || 0}; }),
+      imoveis: [...document.querySelectorAll('#v-imoveis .imovel')].map(d => { const q = c => d.querySelector(c).value; return {descricao: q('.vi-desc'), valor: +q('.vi-valor') || 0, custo: +q('.vi-custo') || 0, aquisicao: q('.vi-aq') || '2015-01', tipo: q('.vi-tipo'), contabil: q('.vi-cont') === '' ? null : +q('.vi-cont'), valorReferencia: +q('.vi-ref') || 0, ded488: +q('.vi-488') || 0, reinvest: (+q('.vi-rein') || 0) / 100, corretagem: +q('.vi-corr') || 0, permuta: q('.vi-op') === 'permuta', recebido: +q('.vi-receb') || 0, torna: +q('.vi-torna') || 0, municipioRecebido: q('.vi-munrec')}; }),
       permutaRiscoRFB: $('v-risco').checked,
       fracaoVista: $('v-vista').value === '' ? 1 : n('v-vista') / 100, prejuizo: n('v-prej'), municipio: $('v-mun').value};
   }
@@ -1002,8 +1004,25 @@
     h += '<tr class="total"><td>Tributos da venda</td>' + ks.map(k => '<td>' + brl(C[k].total) + '</td>').join('') + '</tr>';
     if (e.distribuir) h += '<tr><td>IRRF na distribuição de lucros</td>' + ks.map(k => '<td>' + (C[k].irrf ? brl(C[k].irrf) : '—') + '</td>').join('') + '</tr><tr class="total"><td>Total com a distribuição</td>' + ks.map(k => '<td>' + brl(C[k].totalComIrrf) + '</td>').join('') + '</tr>';
     if (C.pf.irMesVenda < C.pf.itens[0].valor - 0.005) h += '<tr><td>PF: IR que vence no mês seguinte à venda (restante diferido)</td><td>' + brl(C.pf.irMesVenda) + '</td><td>—</td><td>—</td></tr>';
-    if (e.municipio) { const it = r.porImovel.reduce((s, l) => s + window.ITBI.compra({municipio: e.municipio, valorDeclarado: l.valor, financiadoSfh: 0, valorReferencia: 0}).devido.total, 0); h += '<tr class="info"><td>ITBI pago pelo comprador (' + esc(window.ITBI.MUNICIPIOS[e.municipio].nome) + ', valor declarado, sem SFH)</td>' + ks.map(() => '<td>' + brl(it) + '</td>').join('') + '</tr>'; }
-    h += '<tr><td>Fica com o vendedor (após tributos e corretagem)</td>' + ks.map(k => '<td>' + brl(C[k].liquido) + '</td>').join('') + '</tr></tbody>';
+    // ITBI: na permuta, cada permutante paga sobre o imóvel que adquire (Guarulhos, Lei 8.425/2025; São Paulo, Lei 11.154/1991; SJC, LC 696/2025)
+    const itbi = (mun, v) => mun && v > 0 ? window.ITBI.compra({municipio: mun, valorDeclarado: v, financiadoSfh: 0, valorReferencia: 0}).devido.total : 0;
+    const perm = r.porImovel.filter(l => l.permuta);
+    const itbiOutro = r.porImovel.reduce((s, l) => s + itbi(e.municipio, l.valor), 0);
+    const itbiCliente = perm.reduce((s, l) => s + itbi(l.municipioRecebido || e.municipio, l.recebido), 0);
+    if (e.municipio || itbiCliente) {
+      const nomeM = e.municipio ? window.ITBI.MUNICIPIOS[e.municipio].nome : '';
+      h += '<tr class="info"><td>ITBI pago pelo ' + (perm.length ? 'comprador ou outro permutante' : 'comprador') + (nomeM ? ' (' + esc(nomeM) + ', valor declarado, sem SFH)' : '') + '</td>' + ks.map(() => '<td>' + brl(itbiOutro) + '</td>').join('') + '</tr>';
+      if (perm.length) h += '<tr><td>ITBI pago pelo cliente sobre o imóvel recebido na permuta</td>' + ks.map(() => '<td>' + brl(itbiCliente) + '</td>').join('') + '</tr>';
+    }
+    h += '<tr><td>Fica com o vendedor em dinheiro (após tributos e corretagem)</td>' + ks.map(k => '<td>' + brl(C[k].liquido) + '</td>').join('') + '</tr>';
+    if (perm.length) {
+      const rec = perm.reduce((s, l) => s + l.recebido, 0);
+      h += '<tr><td>(+) Imóvel recebido na permuta, a valor de mercado</td>' + ks.map(() => '<td>' + brl(rec) + '</td>').join('') + '</tr>';
+      h += '<tr class="total"><td>Patrimônio após a operação (dinheiro + imóvel − ITBI do cliente)</td>' + ks.map(k => '<td>' + brl(C[k].liquido + rec - itbiCliente) + '</td>').join('') + '</tr>';
+      const cPF = perm.reduce((s, l) => s + l.custoRecebidoPF, 0), cPJ = perm.reduce((s, l) => s + l.custoRecebidoPJ, 0);
+      h += '<tr><td>Custo fiscal do imóvel recebido (declaração da PF / contabilidade da PJ)' + (e.permutaRiscoRFB ? ' — no cenário de risco, a PJ registra o valor recebido' : '') + '</td><td>' + brl(cPF) + '</td><td>' + brl(cPJ) + '</td><td>' + brl(cPJ) + '</td></tr>';
+    }
+    h += '</tbody>';
     $('v-tabela').innerHTML = h;
     const ref = r.ano >= 2027;
     $('v-porimovel').innerHTML = '<thead><tr><th>Imóvel</th><th>Venda</th><th>Ganho PF</th><th>Base PF (após fatores)</th><th>IR PF</th>' + (ref ? '<th>Redutor de ajuste</th><th>Redutor social</th><th>Base CBS/IBS</th><th>CBS+IBS</th>' : '') + '</tr></thead><tbody>' +

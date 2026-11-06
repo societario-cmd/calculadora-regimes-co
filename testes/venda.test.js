@@ -69,3 +69,13 @@ console.log('VENDA OK');
   perto(c27.cenarios.presumido.itens.find(i => i.nome === 'CBS').valor, 200000 * .056, .01, 'CBS só sobre a torna');
   console.log('VENDA (permuta) OK');
 }
+
+// --- Permuta: custo do imóvel recebido (06/11/2026) ---
+{
+  const r5 = V.calcular(Object.assign({}, base, {imoveis: [{valor: 1000000, custo: 400000, aquisicao: '2015-06', tipo: 'usado', permuta: true, recebido: 800000, torna: 200000, municipioRecebido: 'saopaulo'}]}));
+  perto(r5.porImovel[0].custoRecebidoPF, 320000, .01, 'custo do recebido = custo × (1 − torna/total)');
+  ok(r5.porImovel[0].municipioRecebido === 'saopaulo', 'município do recebido');
+  const r6 = V.calcular(Object.assign({}, base, {permutaRiscoRFB: true, imoveis: [{valor: 1000000, custo: 400000, aquisicao: '2015-06', tipo: 'usado', permuta: true, recebido: 800000, torna: 200000}]}));
+  perto(r6.porImovel[0].custoRecebidoPJ, 800000, .01, 'cenário de risco: PJ registra o valor recebido');
+  console.log('VENDA (permuta — custo e ITBI) OK');
+}

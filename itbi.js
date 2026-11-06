@@ -13,7 +13,7 @@
       nota: 'Lei 8.425/2025 trata a integralização como não incidência limitada ao valor do aumento de capital (art. 3º, III) e ainda prevê a regra de atividade preponderante (art. 4º), superada pelo Tema 1.348 do STF.'},
     saopaulo: {nome: 'São Paulo/SP', aliquota: .03, sfh: {aliquota: .005, limiteFinanciado: 120968, limiteImovel: 725808}, fonte: 'Lei 11.154/1991 e Decreto 55.196/2014; limites de 2026 da SF/SP',
       nota: 'SFH, PAR, HIS e consórcio: 0,5% sobre o financiado até R$ 120.968, para imóvel de até R$ 725.808; acima disso, 3%. SFI e carteira hipotecária: 3%. Isenção de primeira aquisição: valor de referência de R$ 245.527,77 em 2026 (conferir requisitos).'},
-    sjc: {nome: 'São José dos Campos/SP', aliquota: .02, sfh: {aliquota: .005, limiteFinanciado: Infinity, limiteImovel: Infinity}, fonte: 'Prefeitura de São José dos Campos (serviço ITBI)',
+    sjc: {nome: 'São José dos Campos/SP', aliquota: .02, sfh: {aliquota: .005, limiteFinanciado: Infinity, limiteImovel: Infinity}, fonte: 'LC Municipal 696/2025 e Prefeitura de São José dos Campos (serviço ITBI)',
       nota: 'SFH: 0,5% sobre a parte financiada e 2% sobre o restante.'},
     outro: {nome: 'Outro município (informar alíquotas)', aliquota: .02, sfh: null, fonte: 'Lei municipal informada pelo usuário', nota: 'Confira a lei municipal: alíquota geral, redução para SFH/HIS, isenções e limites do ano.'}
   };
