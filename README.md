@@ -73,3 +73,7 @@ Estimativa para apoio ao estudo tributário. Não substitui o parecer nem a aná
 - PJ: imóvel no estoque (presunção 8%/12%) ou no ativo não circulante (ganho de capital, sem PIS/COFINS até 2026 — Lei 9.718/1998, art. 3º, § 2º, IV); adicional de IRPJ trimestral ou anual.
 - CBS/IBS a partir de 2027 com redutor de ajuste pelo IPCA mensal ou valor de referência, redutor social corrigido e art. 488 (dedução no IBS a partir de 2029, também na aba de incorporação).
 - `ipca.js`: IPCA mensal oficial (BCB/SGS 433) até 09/2026; acrescentar cada novo mês divulgado pelo IBGE.
+
+### Documentos do imóvel na aba ITBI (06/11/2026)
+- Upload da matrícula e da certidão de valor venal (`docs.js`). PDF com texto é lido no navegador com pdf.js (cdnjs), sem envio do arquivo; na versão publicada no Claude, PDF digitalizado ou foto é lido pelo Claude (capacidade `sample`).
+- Extrai matrícula, cartório, endereço, inscrição, áreas, valor da transmissão mais recente, ônus/restrições (com indicação de cancelamento), valor venal, valor de referência, terreno, construção e exercício; botões para usar o valor como referência da prefeitura ou incluir o imóvel na integralização. Sempre conferir com o documento.

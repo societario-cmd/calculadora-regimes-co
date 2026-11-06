@@ -453,6 +453,14 @@
         <div class="dica">Deixe a alíquota SFH em 0 se o município não tiver redução. Limites em 0 = sem limite.</div>
       </div>
     </div>
+    <div class="grupo">
+      <h3>Documentos do imóvel (opcional)</h3>
+      <label for="i-docmat">Matrícula atualizada (PDF ou foto)</label>
+      <input id="i-docmat" type="file" accept=".pdf,application/pdf,image/*">
+      <label for="i-docven">Certidão de valor venal (PDF ou foto)</label>
+      <input id="i-docven" type="file" accept=".pdf,application/pdf,image/*">
+      <div class="dica">PDF com texto é lido no seu navegador, sem enviar o arquivo. PDF digitalizado ou foto: na versão do Claude, o Claude lê o documento; no site público, preencha os valores à mão. Confira sempre com o documento original.</div>
+    </div>
     <div class="grupo" data-op="compra">
       <h3>Transação</h3>
       <label for="i-decl">Valor da transação declarado (R$)</label>
@@ -473,6 +481,7 @@
   <section>
     <div class="cartoes" id="i-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
     <div class="avisos" id="i-avisos"></div>
+    <div class="secao painel" id="i-doc-wrap" hidden><h2>Dados lidos dos documentos — conferir</h2><div id="i-doc"></div></div>
     <div class="secao painel" id="i-tab-wrap" hidden><h2>Por imóvel</h2><div class="tabela-wrap"><table id="i-tabela"></table></div></div>
     <div class="secao">
       <h2>Memória e fundamentos</h2>
@@ -502,6 +511,14 @@
 </script>
 <script>
 /*ITBI*/
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch (e) {}
+</script>
+<script>
+/*DOCS*/
 </script>
 <script>
 /*IPCA*/
@@ -943,6 +960,58 @@
       $('i-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
     }
   }
+  // Documentos do imóvel
+  const DOC = {matricula: null, venal: null};
+  const fmtArea = a => (a || []).map(x => (x.tipo || 'área') + ' ' + String(x.m2).replace('.', ',') + ' m²').join('; ');
+  function mostrarDocs() {
+    const linhas = [], add = (rot, v) => { if (v != null && v !== '') linhas.push('<tr><td>' + rot + '</td><td>' + v + '</td></tr>'); };
+    const m = DOC.matricula, v = DOC.venal;
+    if (m) {
+      add('Origem da leitura (matrícula)', esc(m.origem));
+      add('Matrícula', esc(m.campos.matricula)); add('Cartório', esc(m.campos.cartorio)); add('Endereço', esc(m.campos.endereco));
+      add('Inscrição municipal', esc(m.campos.inscricao)); add('Áreas', esc(fmtArea(m.campos.areas))); add('Proprietários', esc(m.campos.proprietarios));
+      if (m.campos.ultimoValor) add('Valor da transmissão mais recente registrada', brl(m.campos.ultimoValor) + (m.campos.dataUltimoValor ? ' (' + esc(m.campos.dataUltimoValor) + ')' : ''));
+      if (m.campos.atos) add('Atos (R./AV.) encontrados', m.campos.atos);
+      add('Ônus e restrições citados', m.onus.length ? m.onus.map(o => esc(o.tipo) + (o.cancelado ? ' — com cancelamento citado' : ' — <b>sem cancelamento identificado</b>')).join('<br>') : 'nenhum encontrado no texto');
+    }
+    if (v) {
+      add('Origem da leitura (certidão)', esc(v.origem));
+      add('Exercício', esc(v.campos.exercicio)); add('Inscrição (certidão)', esc(v.campos.inscricao));
+      if (v.campos.valorVenal) add('Valor venal (IPTU)', brl(v.campos.valorVenal));
+      if (v.campos.valorReferencia) add('Valor venal de referência (ITBI)', brl(v.campos.valorReferencia));
+      if (v.campos.valorTerreno) add('Valor do terreno', brl(v.campos.valorTerreno));
+      if (v.campos.valorConstrucao) add('Valor da construção', brl(v.campos.valorConstrucao));
+    }
+    if (m && v && m.campos.inscricao && v.campos.inscricao && m.campos.inscricao.replace(/\D/g, '') !== v.campos.inscricao.replace(/\D/g, '')) linhas.push('<tr><td colspan="2"><b>Atenção:</b> a inscrição municipal da matrícula difere da certidão — confira se os documentos são do mesmo imóvel.</td></tr>');
+    const avisos = [].concat(m ? m.avisos : [], v ? v.avisos : []);
+    const ref = v && (v.campos.valorReferencia || v.campos.valorVenal);
+    const merc = ref || (m && m.campos.ultimoValor);
+    let bt = '';
+    if (ref) bt += '<button class="btn" type="button" id="i-usaref">Usar ' + brl(ref) + ' como valor de referência da prefeitura</button> ';
+    if (merc) bt += '<button class="btn" type="button" id="i-usaint">Adicionar o imóvel à integralização (mercado ' + brl(merc) + ')</button>';
+    $('i-doc').innerHTML = '<div class="tabela-wrap"><table><tbody>' + linhas.join('') + '</tbody></table></div>' +
+      avisos.map(a => '<div class="aviso" style="margin-top:8px">' + esc(a) + '</div>').join('') + (bt ? '<div style="margin-top:10px">' + bt + '</div>' : '');
+    $('i-doc-wrap').hidden = !(m || v);
+    const b1 = $('i-usaref'); if (b1) b1.addEventListener('click', () => { $('i-op').value = 'compra'; $('i-ref').value = Math.round(ref * 100) / 100; render(); });
+    const b2 = $('i-usaint'); if (b2) b2.addEventListener('click', () => {
+      $('i-op').value = 'integralizacao';
+      const desc = 'Matrícula ' + ((m && m.campos.matricula) || '?') + ((m && m.campos.endereco) ? ' — ' + m.campos.endereco : '');
+      const prim = document.querySelector('#i-imoveis .imovel .im-desc');
+      if (prim && prim.value === 'Imóvel 1' && document.querySelectorAll('#i-imoveis .imovel').length === 1) prim.closest('.imovel').remove();
+      linhaImovel({descricao: desc, valorCapital: 0, valorTransferido: 0, valorMercado: Math.round(merc)}); render();
+    });
+  }
+  async function lerDoc(input, tipo) {
+    const f = input.files && input.files[0]; if (!f) return;
+    if (!window.DocImovel) return;
+    $('i-doc-wrap').hidden = false; $('i-doc').innerHTML = '<div class="dica">Lendo ' + esc(f.name) + '…</div>';
+    try { DOC[tipo] = await window.DocImovel.ler(f, tipo === 'venal' ? 'venal' : 'matricula'); }
+    catch (e) { DOC[tipo] = {campos: {}, onus: [], valores: [], avisos: ['Não foi possível ler o arquivo (' + (e && e.message ? e.message : 'erro') + '). Preencha os valores à mão.'], origem: 'não lido'}; }
+    mostrarDocs();
+  }
+  $('i-docmat').addEventListener('change', ev => { ev.stopPropagation(); lerDoc($('i-docmat'), 'matricula'); });
+  $('i-docven').addEventListener('change', ev => { ev.stopPropagation(); lerDoc($('i-docven'), 'venal'); });
+
   $('form-itbi').addEventListener('input', render);
   $('form-itbi').addEventListener('change', render);
   $('form-itbi').addEventListener('submit', ev => ev.preventDefault());
