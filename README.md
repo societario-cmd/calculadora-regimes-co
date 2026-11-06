@@ -15,6 +15,10 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 - INSS da obra por aferição no Sero (IN RFB 2.021/2021): RMT = área × equivalência × VAU × 20%/15%/12%, menos a remuneração comprovada, × 36,8% (ajustável). Redutor de ajuste corrigido pelo IPCA informado.
 - Construtora (empreitada): retenções na fonte (INSS 11% ou 3,5% com CPRB; ISS) como antecipação de caixa; CPP × CPRB na transição da Lei 14.973/2024 (2026: 2,7% da receita + 10% da folha; 2027: 1,8% + 15%; 2028: CPP cheia), CBS/IBS com redução de 50% e crédito dos materiais, ISS com dedução de materiais, presunção 8%/12% ou 32%, e Simples Anexo IV.
 
+## Aba Ganho de capital PF
+
+- `gcap.js`: ganho de capital da pessoa física na venda de imóvel, no formato do GCAP: custo de aquisição (compra, herança ou doação) e benfeitorias com data, cada parcela com a redução da Lei 7.713/1988 e os fatores FR1/FR2 da Lei 11.196/2005 pela sua data; corretagem; condomínio com a parte de cada proprietário e o limite de R$ 440 mil por parte (IN SRF 84/2001, art. 29, parágrafo 1º, II, "a"); reinvestimento em 180 dias proporcional; venda a prazo com DARF 4600 por recebimento e vencimento no último dia útil do mês seguinte (feriados nacionais e 31/12); multa e juros por atraso com a Selic informada.
+
 ## Aba ITBI
 
 - Compra e venda: base no valor declarado (STJ, Tema 1.113; CTN, art. 38 com a LC 227/2026), alíquota reduzida do SFH quando o município prevê, e o cenário de risco se a prefeitura exigir o valor de referência.
@@ -39,6 +43,7 @@ template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
 cnae.js             enquadramento por CNAE e consulta de CNPJ
 construcao.js       módulo de construção e incorporação (RET, CPRB, redutores)
+gcap.js             ganho de capital PF (venda de imóvel)
 itbi.js             módulo de ITBI (compra, integralização, reorganização, preponderância e custas de cartório)
 build.py            embute motor.js, cnae.js, construcao.js e itbi.js em template.html e gera index.html
 testes/             um teste por módulo (node testes/<nome>.test.js)

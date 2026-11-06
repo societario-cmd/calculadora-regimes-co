@@ -116,6 +116,7 @@
   <button type="button" role="tab" data-aba="geral" aria-selected="true">Regimes gerais</button>
   <button type="button" role="tab" data-aba="obra" aria-selected="false">Construção e Incorporação</button>
   <button type="button" role="tab" data-aba="venda" aria-selected="false">Venda de imóveis</button>
+  <button type="button" role="tab" data-aba="gcap" aria-selected="false">Ganho de capital PF</button>
   <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
   <button type="button" role="tab" data-aba="itcmd" aria-selected="false">ITCMD</button>
 </nav>
@@ -428,6 +429,74 @@
   </section>
 </main>
 
+<main id="aba-gcap" hidden>
+  <form class="painel" id="form-gcap" autocomplete="off">
+    <h2>Ganho de capital — pessoa física</h2>
+    <div class="grupo">
+      <h3>Venda</h3>
+      <div class="linha2">
+        <div><label for="g-data">Mês da venda</label><input id="g-data" type="month" value="2026-11"></div>
+        <div><label for="g-valor">Valor de venda (R$)</label><input id="g-valor" type="number" min="0" step="1000" value="900000"></div>
+      </div>
+      <label for="g-corr">Corretagem paga pelo vendedor (R$)</label>
+      <input id="g-corr" type="number" min="0" step="1000" value="0">
+    </div>
+    <div class="grupo">
+      <h3>Aquisição</h3>
+      <label for="g-orig">Como o imóvel foi adquirido</label>
+      <select id="g-orig"><option value="compra">Compra</option><option value="heranca">Herança</option><option value="doacao">Doação</option></select>
+      <div class="linha2">
+        <div><label for="g-aqdata" id="g-aqrot">Mês da aquisição</label><input id="g-aqdata" type="month" value="2015-06"></div>
+        <div><label for="g-aqvalor">Custo declarado no IR (R$)</label><input id="g-aqvalor" type="number" min="0" step="1000" value="400000"></div>
+      </div>
+      <div class="dica">Use o valor da ficha de Bens e Direitos da declaração. Herança: data do óbito; doação: data da doação.</div>
+    </div>
+    <div class="grupo">
+      <h3>Benfeitorias e reformas</h3>
+      <div id="g-benf"></div>
+      <button class="btn" type="button" id="g-addb">+ Adicionar benfeitoria</button>
+      <div class="dica">Só as declaradas no IR e comprovadas com notas fiscais e recibos (IN SRF 84/2001, art. 17). Cada uma tem os fatores de redução pela sua data.</div>
+    </div>
+    <div class="grupo">
+      <h3>Proprietários</h3>
+      <div id="g-props"></div>
+      <button class="btn" type="button" id="g-addp">+ Adicionar proprietário</button>
+      <div class="dica">Em condomínio cada um apura a sua parte e o limite de R$ 440 mil é por parte. Casal em comunhão: o bem comum pode ser declarado por um só (100%) ou por cada um na sua metade, conforme as declarações.</div>
+    </div>
+    <div class="grupo">
+      <h3>Recebimentos e pagamento</h3>
+      <label class="check"><input id="g-prazo" type="checkbox"> Venda a prazo (informar parcelas)</label>
+      <div id="g-receb" hidden></div>
+      <button class="btn" type="button" id="g-addr" hidden>+ Adicionar recebimento</button>
+      <div class="linha2">
+        <div><label for="g-pag">Data do pagamento, se em atraso</label><input id="g-pag" type="date"></div>
+        <div><label for="g-selic">Selic acumulada (%)</label><input id="g-selic" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+      <div class="dica">Selic acumulada do mês seguinte ao vencimento até o mês anterior ao pagamento (tabela da Receita). Para o valor exato, use o Sicalc.</div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="g-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="g-avisos"></div>
+    <div class="secao painel"><h2>Por proprietário</h2><div class="tabela-wrap"><table id="g-tprop"></table></div></div>
+    <div class="secao painel"><h2>DARF (código 4600)</h2><div class="tabela-wrap"><table id="g-tdarf"></table></div></div>
+    <div class="secao painel" id="g-tparc-wrap"><h2>Custo e fatores de redução</h2><div class="tabela-wrap"><table id="g-tparc"></table></div></div>
+    <div class="secao">
+      <button class="btn primario" type="button" id="g-copiar">Copiar resumo</button>
+      <h2 style="margin-top:14px">Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="g-memoria"></ul></details>
+      <details><summary>Regras aplicadas</summary><ul>
+        <li>Ganho = valor de alienação (menos corretagem paga pelo vendedor) − custo de aquisição e benfeitorias, em valores históricos (IN SRF 84/2001, arts. 17 e 19).</li>
+        <li>Redução de 5% por ano de posse para imóvel adquirido até 1988 — 100% até 1969 (Lei 7.713/1988, art. 18) — e fatores FR1 (1/1,0060 por mês de 01/1996 a 11/2005) e FR2 (1/1,0035 por mês desde 12/2005) (Lei 11.196/2005, art. 40).</li>
+        <li>Isenções: único imóvel vendido por até R$ 440 mil, sem outra venda em 5 anos (Lei 9.250/1995, art. 23); reinvestimento em imóvel residencial no país em 180 dias, proporcional e uma vez a cada 5 anos (Lei 11.196/2005, art. 39).</li>
+        <li>Alíquotas de 15% a 22,5% (Lei 8.981/1995, art. 21, com a Lei 13.259/2016). DARF 4600 até o último dia útil do mês seguinte ao recebimento; venda a prazo paga proporcionalmente (IN SRF 84/2001, arts. 31 e 32). Declare no GCAP e importe na declaração anual.</li>
+        <li>Atraso: multa de 0,33% ao dia, até 20%, e juros Selic (Lei 9.430/1996, art. 61). A Lei 15.270/2025 (IRPFM e dividendos) não alterou o ganho de capital de imóveis.</li>
+        <li>Imóvel atualizado pela Lei 14.973/2024 (imposto definitivo de 4% pago em 2024): o custo atualizado só vale por inteiro depois do prazo da lei; vendas antes disso seguem regra de proporção, não calculada aqui.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
 <main id="aba-itcmd" hidden>
   <form class="painel" id="form-itcmd" autocomplete="off">
     <h2>ITCMD — herança e doação</h2>
@@ -610,6 +679,85 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
 </script>
 <script>
 /*VENDA*/
+</script>
+<script>
+/*GCAP*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const G = window.GCAP;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const dt = s => s ? s.split('-').reverse().join('/') : '';
+  const rot = s => { const [a, m] = String(s).split('-'); return m + '/' + a; };
+  const caixa = 'border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px';
+  function linha(alvo, html) {
+    const d = document.createElement('div'); d.className = 'g-item'; d.style.cssText = caixa; d.innerHTML = html + '<button class="btn" type="button" style="margin-top:6px">Remover</button>';
+    d.querySelector('button').addEventListener('click', () => { d.remove(); render(); });
+    $(alvo).appendChild(d);
+  }
+  const benf = v => linha('g-benf', '<input class="b-desc" type="text" placeholder="Descrição (ex.: ampliação, reforma da cozinha)" value="' + esc(v && v.descricao || '') + '"><div class="linha2"><div><label>Mês</label><input class="b-data" type="month" value="' + (v && v.data || '') + '"></div><div><label>Valor (R$)</label><input class="b-val" type="number" min="0" step="1000" value="' + (v && v.valor || 0) + '"></div></div>');
+  const prop = v => linha('g-props', '<div class="linha2"><div><label>Nome</label><input class="p-nome" type="text" value="' + esc(v && v.nome || '') + '"></div><div><label>Participação (%)</label><input class="p-pct" type="number" min="0" max="100" step="0.01" value="' + (v ? v.pct : 100) + '"></div></div>' +
+    '<label class="check"><input class="p-unico" type="checkbox"> Único imóvel e sem venda de imóvel nos últimos 5 anos</label>' +
+    '<label>Valor aplicado em imóvel residencial em até 180 dias (R$)</label><input class="p-rein" type="number" min="0" step="1000" value="0">' +
+    '<label class="check"><input class="p-res" type="checkbox" checked> O imóvel vendido é residencial (condição do reinvestimento)</label>');
+  const receb = v => linha('g-receb', '<div class="linha2"><div><label>Mês do recebimento</label><input class="r-data" type="month" value="' + (v && v.data || '') + '"></div><div><label>Valor recebido (R$)</label><input class="r-val" type="number" min="0" step="1000" value="' + (v && v.valor || 0) + '"></div></div>');
+  prop({nome: 'Vendedor', pct: 100});
+  $('g-addb').addEventListener('click', () => { benf(); render(); });
+  $('g-addp').addEventListener('click', () => { prop({nome: '', pct: 0}); render(); });
+  $('g-addr').addEventListener('click', () => { receb(); render(); });
+  $('g-prazo').addEventListener('change', () => {
+    const on = $('g-prazo').checked; $('g-receb').hidden = !on; $('g-addr').hidden = !on;
+    if (on && !$('g-receb').children.length) { const v = +$('g-valor').value || 0; receb({data: $('g-data').value, valor: Math.round(v * .3)}); receb({data: '', valor: Math.round(v * .7)}); }
+    render();
+  });
+  $('g-orig').addEventListener('change', () => { const o = $('g-orig').value; $('g-aqrot').textContent = o === 'heranca' ? 'Mês do óbito' : o === 'doacao' ? 'Mês da doação' : 'Mês da aquisição'; });
+  function ler() {
+    const n = id => parseFloat($(id).value) || 0, all = (sel, f) => [...document.querySelectorAll(sel)].map(f);
+    return {venda: $('g-data').value, valorVenda: n('g-valor'), corretagem: n('g-corr'), origem: $('g-orig').value,
+      aquisicao: {data: $('g-aqdata').value, valor: n('g-aqvalor')},
+      benfeitorias: all('#g-benf .g-item', d => ({descricao: d.querySelector('.b-desc').value, data: d.querySelector('.b-data').value, valor: +d.querySelector('.b-val').value || 0})),
+      proprietarios: all('#g-props .g-item', d => ({nome: d.querySelector('.p-nome').value, pct: (+d.querySelector('.p-pct').value || 0) / 100, unico: d.querySelector('.p-unico').checked, reinvestido: +d.querySelector('.p-rein').value || 0, residencial: d.querySelector('.p-res').checked})),
+      recebimentos: $('g-prazo').checked ? all('#g-receb .g-item', d => ({data: d.querySelector('.r-data').value, valor: +d.querySelector('.r-val').value || 0})) : [],
+      pagamento: $('g-pag').value, selicAcumulada: n('g-selic') / 100};
+  }
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  let ultimo = null;
+  function render() {
+    const e = ler();
+    if (!/^\d{4}-\d{2}$/.test(e.venda) || !/^\d{4}-\d{2}$/.test(e.aquisicao.data)) { $('g-cartoes').innerHTML = card('Informe as datas', '—', 'mês da venda e da aquisição'); return; }
+    let r; try { r = G.calcular(e); } catch (err) { $('g-cartoes').innerHTML = card('Erro', '—', esc(err.message)); return; }
+    ultimo = r;
+    const efet = r.ganho > 0 ? r.irTotal / r.ganho : 0;
+    $('g-cartoes').innerHTML = card('IR sobre ganho de capital', brl(r.irTotal), r.irTotal ? 'alíquota efetiva ' + (efet * 100).toFixed(2).replace('.', ',') + '% do ganho' : (r.ganho > 0 ? 'isento ou reduzido a zero' : 'sem ganho'), true) +
+      card('Ganho de capital', brl(r.ganho), 'base após reduções: ' + brl(r.baseTotal)) +
+      card('Líquido para o vendedor', brl(r.V0 - r.corr - r.irTotal), 'venda − corretagem − IR');
+    $('g-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    $('g-tprop').innerHTML = '<thead><tr><th>Proprietário</th><th>Parte</th><th>Valor da parte</th><th>Ganho</th><th>Base tributável</th><th>IR</th></tr></thead><tbody>' +
+      r.proprietarios.map(p => '<tr><td>' + esc(p.nome) + (p.isencao ? '<div class="dica">' + esc(p.isencao) + '</div>' : '') + '</td><td>' + (p.pct * 100).toFixed(2).replace('.', ',') + '%</td><td>' + brl(p.valorParte) + '</td><td>' + brl(p.ganho) + '</td><td>' + brl(p.base) + '</td><td>' + brl(p.ir) + '</td></tr>').join('') +
+      '<tr class="total"><td>Total</td><td></td><td>' + brl(r.V0) + '</td><td>' + brl(r.ganho) + '</td><td></td><td>' + brl(r.irTotal) + '</td></tr></tbody>';
+    const atr = r.darfs.some(d => d.atraso.dias > 0);
+    $('g-tdarf').innerHTML = '<thead><tr><th>Recebimento</th><th>Valor recebido</th><th>IR (principal)</th><th>Vencimento</th>' + (atr ? '<th>Dias de atraso</th><th>Multa</th><th>Juros</th><th>Total</th>' : '') + '</tr></thead><tbody>' +
+      r.darfs.map(d => '<tr><td>' + rot(d.mes) + '</td><td>' + brl(d.recebido) + '</td><td>' + brl(d.valor) + '</td><td>' + dt(d.vencimento) + '</td>' + (atr ? '<td>' + d.atraso.dias + '</td><td>' + brl(d.atraso.multa) + '</td><td>' + brl(d.atraso.juros) + '</td><td>' + brl(d.atraso.total) + '</td>' : '') + '</tr>').join('') + '</tbody>';
+    $('g-tparc').innerHTML = '<thead><tr><th>Parcela do custo</th><th>Mês</th><th>Valor</th><th>Ganho rateado</th><th>Redução 7.713</th><th>FR1</th><th>FR2</th><th>Base</th></tr></thead><tbody>' +
+      r.parcelas.map(p => '<tr><td>' + esc(p.descricao) + '</td><td>' + rot(p.data) + '</td><td>' + brl(p.valor) + '</td><td>' + brl(p.ganho) + '</td><td>' + (p.red7713 ? Math.round(p.red7713 * 100) + '%' : '—') + '</td><td>' + p.fr1.toFixed(6).replace('.', ',') + '</td><td>' + p.fr2.toFixed(6).replace('.', ',') + '</td><td>' + brl(p.base) + '</td></tr>').join('') + '</tbody>';
+    $('g-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+  }
+  $('g-copiar').addEventListener('click', () => {
+    if (!ultimo) return; const r = ultimo;
+    const t = ['Ganho de capital — venda de imóvel (pessoa física)', 'Venda em ' + rot(r.venda) + ': ' + brl(r.V0) + (r.corr ? ' (corretagem ' + brl(r.corr) + ')' : ''), 'Custo: ' + brl(r.custo), 'Ganho: ' + brl(r.ganho) + '; base após reduções: ' + brl(r.baseTotal)]
+      .concat(r.proprietarios.map(p => p.nome + ' (' + (p.pct * 100).toFixed(2).replace('.', ',') + '%): IR ' + brl(p.ir) + (p.isencao ? ' — ' + p.isencao : '')))
+      .concat(r.darfs.map(d => 'DARF 4600: ' + brl(d.valor) + ', vencimento ' + dt(d.vencimento)))
+      .concat(['IR total: ' + brl(r.irTotal), 'Estimativa — Controller & Oraculu\'s. Conferir no programa GCAP da Receita Federal.']).join('\n');
+    navigator.clipboard && navigator.clipboard.writeText(t).then(() => { $('g-copiar').textContent = 'Copiado!'; setTimeout(() => { $('g-copiar').textContent = 'Copiar resumo'; }, 1500); });
+  });
+  $('form-gcap').addEventListener('input', render);
+  $('form-gcap').addEventListener('change', render);
+  $('form-gcap').addEventListener('submit', ev => ev.preventDefault());
+  render();
+})();
 </script>
 <script>
 (function () {
