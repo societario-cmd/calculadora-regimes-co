@@ -119,6 +119,7 @@
   <button type="button" role="tab" data-aba="gcap" aria-selected="false">Ganho de capital PF</button>
   <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
   <button type="button" role="tab" data-aba="itcmd" aria-selected="false">ITCMD</button>
+  <button type="button" role="tab" data-aba="icms" aria-selected="false">ICMS</button>
 </nav>
 
 <main id="aba-geral">
@@ -497,6 +498,79 @@
   </section>
 </main>
 
+<main id="aba-icms" hidden>
+  <form class="painel" id="form-icms" autocomplete="off">
+    <h2>ICMS por estado</h2>
+    <div class="grupo">
+      <h3>Operação</h3>
+      <div class="linha2">
+        <div><label for="m-ori">Estado de origem</label><select id="m-ori"></select></div>
+        <div><label for="m-des">Estado de destino</label><select id="m-des"></select></div>
+      </div>
+      <label for="m-dest">Destinatário</label>
+      <select id="m-dest">
+        <option value="revenda">Contribuinte — revenda ou industrialização</option>
+        <option value="consumo">Contribuinte — uso, consumo ou ativo imobilizado</option>
+        <option value="naocontrib">Não contribuinte (consumidor final pessoa física ou PJ sem IE)</option>
+      </select>
+      <label class="check"><input id="m-imp" type="checkbox"> Mercadoria importada ou com conteúdo de importação acima de 40% (4%)</label>
+    </div>
+    <div class="grupo">
+      <h3>Valores da nota</h3>
+      <label class="check"><input id="m-com" type="checkbox" checked> Os valores já incluem o ICMS (preço normal da nota)</label>
+      <div class="linha2">
+        <div><label for="m-prod">Produtos (R$)</label><input id="m-prod" type="number" min="0" step="100" value="10000"></div>
+        <div><label for="m-ipi">IPI (R$)</label><input id="m-ipi" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="m-frete">Frete (R$)</label><input id="m-frete" type="number" min="0" step="10" value="0"></div>
+        <div><label for="m-desp">Seguro e outras despesas (R$)</label><input id="m-desp" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="m-desc">Desconto incondicional (R$)</label><input id="m-desc" type="number" min="0" step="10" value="0"></div>
+        <div><label for="m-red">Redução da base (%)</label><input id="m-red" type="number" min="0" max="100" step="0.01" value="0"></div>
+      </div>
+      <div class="dica">Desmarque a primeira opção se quiser saber o preço com o ICMS embutido a partir do valor líquido.</div>
+    </div>
+    <div class="grupo">
+      <h3>Alíquotas do destino (editáveis)</h3>
+      <div class="linha2">
+        <div><label for="m-aint">Alíquota interna (%)</label><input id="m-aint" type="number" min="0" max="40" step="0.01"></div>
+        <div><label for="m-fcp">FCP (%)</label><input id="m-fcp" type="number" min="0" max="4" step="0.01"></div>
+      </div>
+      <div data-m="consumo" hidden><label for="m-bd">Base do DIFAL do contribuinte</label><select id="m-bd"><option value="dupla">Base dupla (maioria dos estados)</option><option value="unica">Base única</option></select></div>
+      <div class="dica">Preenchidas com a alíquota geral do estado. Para produto com alíquota própria (cesta básica, bebidas, energia, cosméticos etc.), informe a do RICMS.</div>
+    </div>
+    <div class="grupo">
+      <h3>Substituição tributária</h3>
+      <label class="check"><input id="m-st" type="checkbox"> Mercadoria sujeita a ICMS-ST (remetente substituto)</label>
+      <div data-m="st" hidden class="linha2">
+        <div><label for="m-mva">MVA original (%)</label><input id="m-mva" type="number" min="0" step="0.01" value="40"></div>
+        <div><label for="m-aist">Alíquota interna da ST (%)</label><input id="m-aist" type="number" min="0" max="40" step="0.01" placeholder="igual à do destino"></div>
+      </div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="m-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="m-avisos"></div>
+    <div class="secao painel"><h2>Resumo da nota</h2><div class="tabela-wrap"><table id="m-res"></table></div></div>
+    <div class="secao painel"><h2>Transição da reforma (EC 132/2023)</h2><div class="tabela-wrap"><table id="m-proj"></table></div><div class="dica">O ICMS cai para 90%, 80%, 70% e 60% das alíquotas de 2029 a 2032 e acaba em 2033, substituído pelo IBS (ADCT, art. 128). Mesma operação, sem considerar o IBS.</div></div>
+    <div class="secao">
+      <h2>Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="m-memoria"></ul></details>
+      <details><summary>Alíquotas gerais por estado — 2026 (saindo de <span id="m-orinome"></span>)</summary><div class="tabela-wrap"><table id="m-tab"></table></div>
+        <div class="dica">Alíquota geral (modal) de cada estado, conferida em 06/11/2026. Alagoas passou a 20,5% em 01/04/2026. Interestaduais: 12%; 7% de Sul e Sudeste (exceto ES) para Norte, Nordeste, Centro-Oeste e ES; 4% para importados (Res. Senado 22/1989 e 13/2012).</div></details>
+      <details><summary>Regras aplicadas</summary><ul>
+        <li>ICMS calculado por dentro: o imposto integra a própria base (LC 87/1996, art. 13, parágrafo 1º, I). Frete, seguro e despesas cobradas entram; desconto incondicional sai.</li>
+        <li>IPI entra na base quando o destinatário é consumidor final (uso, consumo, ativo ou não contribuinte) e fica fora na revenda ou industrialização (LC 87/1996, art. 13, parágrafo 2º).</li>
+        <li>DIFAL: diferença entre a alíquota interna do destino e a interestadual, devido ao destino (CF, art. 155, parágrafo 2º, VII e VIII; LC 190/2022). Não contribuinte: recolhido pelo remetente, com base dupla (Convênio ICMS 236/2021).</li>
+        <li>ICMS-ST: base = valor da operação com IPI, frete e despesas × (1 + MVA); interestadual usa a MVA ajustada (Convênio ICMS 142/2018, cláusula 9ª). ST devida = base × alíquota interna − ICMS próprio.</li>
+        <li>Não cobre: benefícios fiscais e regimes especiais, alíquotas por produto, ICMS monofásico de combustíveis, Simples Nacional (o ICMS vai no DAS) e diferimento.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
 <main id="aba-itcmd" hidden>
   <form class="painel" id="form-itcmd" autocomplete="off">
     <h2>ITCMD — herança e doação</h2>
@@ -679,6 +753,56 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
 </script>
 <script>
 /*VENDA*/
+</script>
+<script>
+/*ICMS*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const C = window.ICMS;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const pc = v => (v * 100).toFixed(2).replace('.', ',') + '%';
+  const ufs = Object.keys(C.UF).sort();
+  ['m-ori', 'm-des'].forEach(id => ufs.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k + ' — ' + C.UF[k].nome; $(id).appendChild(o); }));
+  $('m-ori').value = 'SP'; $('m-des').value = 'SP';
+  function preencher() { const u = C.UF[$('m-des').value]; $('m-aint').value = +(u.interna * 100).toFixed(2); $('m-fcp').value = +(u.fcp * 100).toFixed(2); }
+  preencher();
+  $('m-des').addEventListener('change', preencher);
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  function render() {
+    const n = id => parseFloat($(id).value) || 0, dest = $('m-dest').value;
+    $('form-icms').querySelector('[data-m="consumo"]').hidden = !(dest === 'consumo' && $('m-ori').value !== $('m-des').value);
+    $('form-icms').querySelector('[data-m="st"]').hidden = !$('m-st').checked;
+    const e = {origem: $('m-ori').value, destino: $('m-des').value, destinatario: dest, importado: $('m-imp').checked, valorComICMS: $('m-com').checked,
+      produtos: n('m-prod'), ipi: n('m-ipi'), frete: n('m-frete'), despesas: n('m-desp'), desconto: n('m-desc'), reducaoBC: n('m-red') / 100,
+      aliqInterna: n('m-aint') / 100, fcp: n('m-fcp') / 100, baseDifal: $('m-bd').value,
+      st: {ativo: $('m-st').checked, mva: n('m-mva') / 100, aliqInterna: $('m-aist').value === '' ? '' : n('m-aist') / 100}};
+    const r = C.calcular(e);
+    $('m-cartoes').innerHTML = card('ICMS da operação', brl(r.icms + r.fcp), (r.interna ? 'interna ' : 'interestadual ') + pc(r.aliqOperacao) + (r.fcp ? ' + FCP' : ''), true) +
+      card('DIFAL ' + (dest === 'naocontrib' ? '(pago pelo remetente)' : '(pago pelo destinatário)'), brl(r.difal + r.fcpDifal), r.interna || dest === 'revenda' ? 'não se aplica' : 'para ' + e.destino + (r.fcpDifal ? ', com FCP ' + brl(r.fcpDifal) : '')) +
+      card('ICMS-ST', brl(r.st + r.fcpSt), e.st.ativo ? 'MVA ' + pc(r.mvaAjustada) + (r.mvaAjustada !== e.st.mva ? ' (ajustada)' : '') : 'não marcada');
+    $('m-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    const linhas = [['Valor da operação (base antes da redução)', r.valorOp], ['Base de cálculo do ICMS', r.base], ['ICMS próprio (' + pc(r.aliqOperacao) + ')', r.icms]];
+    if (r.fcp) linhas.push(['FCP', r.fcp]);
+    if (r.difal || r.fcpDifal) linhas.push(['Base do DIFAL', r.baseDifal], ['DIFAL', r.difal], ['FCP do DIFAL', r.fcpDifal]);
+    if (e.st.ativo) linhas.push(['Base da ST', r.baseST], ['ICMS-ST', r.st], ['FCP-ST', r.fcpSt]);
+    linhas.push(['Total de ICMS na operação', r.total]);
+    $('m-res').innerHTML = '<tbody>' + linhas.map((l, i) => '<tr' + (i === linhas.length - 1 ? ' class="total"' : '') + '><td>' + l[0] + '</td><td>' + brl(l[1]) + '</td></tr>').join('') +
+      '<tr><td>Carga sobre o valor da operação</td><td>' + pc(r.cargaPct) + '</td></tr></tbody>';
+    $('m-proj').innerHTML = '<thead><tr><th>Ano</th>' + r.projecao.map(p => '<th>' + p.ano + '</th>').join('') + '</tr></thead><tbody><tr><td>ICMS (% da alíquota)</td>' + r.projecao.map(p => '<td>' + Math.round(p.fator * 100) + '%</td>').join('') + '</tr><tr><td>ICMS total da operação</td>' + r.projecao.map(p => '<td>' + brl(p.total) + '</td>').join('') + '</tr></tbody>';
+    $('m-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+    $('m-orinome').textContent = C.UF[e.origem].nome;
+    $('m-tab').innerHTML = '<thead><tr><th>UF</th><th>Estado</th><th>Alíquota geral</th><th>FCP geral</th><th>Interestadual de ' + e.origem + '</th><th>Observação</th></tr></thead><tbody>' +
+      ufs.map(k => { const u = C.UF[k], it = C.interestadual(e.origem, k, e.importado); return '<tr' + (k === e.destino ? ' class="total"' : '') + '><td>' + k + '</td><td>' + esc(u.nome) + '</td><td>' + pc(u.interna) + '</td><td>' + (u.fcp ? pc(u.fcp) : '—') + '</td><td>' + (it === null ? 'interna' : pc(it)) + '</td><td>' + esc(u.obs || '') + '</td></tr>'; }).join('') + '</tbody>';
+  }
+  $('form-icms').addEventListener('input', render);
+  $('form-icms').addEventListener('change', render);
+  $('form-icms').addEventListener('submit', ev => ev.preventDefault());
+  render();
+})();
 </script>
 <script>
 /*GCAP*/

@@ -119,6 +119,7 @@
   <button type="button" role="tab" data-aba="gcap" aria-selected="false">Ganho de capital PF</button>
   <button type="button" role="tab" data-aba="itbi" aria-selected="false">ITBI</button>
   <button type="button" role="tab" data-aba="itcmd" aria-selected="false">ITCMD</button>
+  <button type="button" role="tab" data-aba="icms" aria-selected="false">ICMS</button>
 </nav>
 
 <main id="aba-geral">
@@ -492,6 +493,79 @@
         <li>Alíquotas de 15% a 22,5% (Lei 8.981/1995, art. 21, com a Lei 13.259/2016). DARF 4600 até o último dia útil do mês seguinte ao recebimento; venda a prazo paga proporcionalmente (IN SRF 84/2001, arts. 31 e 32). Declare no GCAP e importe na declaração anual.</li>
         <li>Atraso: multa de 0,33% ao dia, até 20%, e juros Selic (Lei 9.430/1996, art. 61). A Lei 15.270/2025 (IRPFM e dividendos) não alterou o ganho de capital de imóveis.</li>
         <li>Imóvel atualizado pela Lei 14.973/2024 (imposto definitivo de 4% pago em 2024): o custo atualizado só vale por inteiro depois do prazo da lei; vendas antes disso seguem regra de proporção, não calculada aqui.</li>
+      </ul></details>
+    </div>
+  </section>
+</main>
+
+<main id="aba-icms" hidden>
+  <form class="painel" id="form-icms" autocomplete="off">
+    <h2>ICMS por estado</h2>
+    <div class="grupo">
+      <h3>Operação</h3>
+      <div class="linha2">
+        <div><label for="m-ori">Estado de origem</label><select id="m-ori"></select></div>
+        <div><label for="m-des">Estado de destino</label><select id="m-des"></select></div>
+      </div>
+      <label for="m-dest">Destinatário</label>
+      <select id="m-dest">
+        <option value="revenda">Contribuinte — revenda ou industrialização</option>
+        <option value="consumo">Contribuinte — uso, consumo ou ativo imobilizado</option>
+        <option value="naocontrib">Não contribuinte (consumidor final pessoa física ou PJ sem IE)</option>
+      </select>
+      <label class="check"><input id="m-imp" type="checkbox"> Mercadoria importada ou com conteúdo de importação acima de 40% (4%)</label>
+    </div>
+    <div class="grupo">
+      <h3>Valores da nota</h3>
+      <label class="check"><input id="m-com" type="checkbox" checked> Os valores já incluem o ICMS (preço normal da nota)</label>
+      <div class="linha2">
+        <div><label for="m-prod">Produtos (R$)</label><input id="m-prod" type="number" min="0" step="100" value="10000"></div>
+        <div><label for="m-ipi">IPI (R$)</label><input id="m-ipi" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="m-frete">Frete (R$)</label><input id="m-frete" type="number" min="0" step="10" value="0"></div>
+        <div><label for="m-desp">Seguro e outras despesas (R$)</label><input id="m-desp" type="number" min="0" step="10" value="0"></div>
+      </div>
+      <div class="linha2">
+        <div><label for="m-desc">Desconto incondicional (R$)</label><input id="m-desc" type="number" min="0" step="10" value="0"></div>
+        <div><label for="m-red">Redução da base (%)</label><input id="m-red" type="number" min="0" max="100" step="0.01" value="0"></div>
+      </div>
+      <div class="dica">Desmarque a primeira opção se quiser saber o preço com o ICMS embutido a partir do valor líquido.</div>
+    </div>
+    <div class="grupo">
+      <h3>Alíquotas do destino (editáveis)</h3>
+      <div class="linha2">
+        <div><label for="m-aint">Alíquota interna (%)</label><input id="m-aint" type="number" min="0" max="40" step="0.01"></div>
+        <div><label for="m-fcp">FCP (%)</label><input id="m-fcp" type="number" min="0" max="4" step="0.01"></div>
+      </div>
+      <div data-m="consumo" hidden><label for="m-bd">Base do DIFAL do contribuinte</label><select id="m-bd"><option value="dupla">Base dupla (maioria dos estados)</option><option value="unica">Base única</option></select></div>
+      <div class="dica">Preenchidas com a alíquota geral do estado. Para produto com alíquota própria (cesta básica, bebidas, energia, cosméticos etc.), informe a do RICMS.</div>
+    </div>
+    <div class="grupo">
+      <h3>Substituição tributária</h3>
+      <label class="check"><input id="m-st" type="checkbox"> Mercadoria sujeita a ICMS-ST (remetente substituto)</label>
+      <div data-m="st" hidden class="linha2">
+        <div><label for="m-mva">MVA original (%)</label><input id="m-mva" type="number" min="0" step="0.01" value="40"></div>
+        <div><label for="m-aist">Alíquota interna da ST (%)</label><input id="m-aist" type="number" min="0" max="40" step="0.01" placeholder="igual à do destino"></div>
+      </div>
+    </div>
+  </form>
+  <section>
+    <div class="cartoes" id="m-cartoes" style="grid-template-columns:repeat(3,1fr)"></div>
+    <div class="avisos" id="m-avisos"></div>
+    <div class="secao painel"><h2>Resumo da nota</h2><div class="tabela-wrap"><table id="m-res"></table></div></div>
+    <div class="secao painel"><h2>Transição da reforma (EC 132/2023)</h2><div class="tabela-wrap"><table id="m-proj"></table></div><div class="dica">O ICMS cai para 90%, 80%, 70% e 60% das alíquotas de 2029 a 2032 e acaba em 2033, substituído pelo IBS (ADCT, art. 128). Mesma operação, sem considerar o IBS.</div></div>
+    <div class="secao">
+      <h2>Memória e fundamentos</h2>
+      <details open><summary>Cálculo</summary><ul id="m-memoria"></ul></details>
+      <details><summary>Alíquotas gerais por estado — 2026 (saindo de <span id="m-orinome"></span>)</summary><div class="tabela-wrap"><table id="m-tab"></table></div>
+        <div class="dica">Alíquota geral (modal) de cada estado, conferida em 06/11/2026. Alagoas passou a 20,5% em 01/04/2026. Interestaduais: 12%; 7% de Sul e Sudeste (exceto ES) para Norte, Nordeste, Centro-Oeste e ES; 4% para importados (Res. Senado 22/1989 e 13/2012).</div></details>
+      <details><summary>Regras aplicadas</summary><ul>
+        <li>ICMS calculado por dentro: o imposto integra a própria base (LC 87/1996, art. 13, parágrafo 1º, I). Frete, seguro e despesas cobradas entram; desconto incondicional sai.</li>
+        <li>IPI entra na base quando o destinatário é consumidor final (uso, consumo, ativo ou não contribuinte) e fica fora na revenda ou industrialização (LC 87/1996, art. 13, parágrafo 2º).</li>
+        <li>DIFAL: diferença entre a alíquota interna do destino e a interestadual, devido ao destino (CF, art. 155, parágrafo 2º, VII e VIII; LC 190/2022). Não contribuinte: recolhido pelo remetente, com base dupla (Convênio ICMS 236/2021).</li>
+        <li>ICMS-ST: base = valor da operação com IPI, frete e despesas × (1 + MVA); interestadual usa a MVA ajustada (Convênio ICMS 142/2018, cláusula 9ª). ST devida = base × alíquota interna − ICMS próprio.</li>
+        <li>Não cobre: benefícios fiscais e regimes especiais, alíquotas por produto, ICMS monofásico de combustíveis, Simples Nacional (o ICMS vai no DAS) e diferimento.</li>
       </ul></details>
     </div>
   </section>
@@ -2135,6 +2209,182 @@ try { if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'http
   if (node) module.exports = api; else raiz.Venda = api;
 })(typeof self !== 'undefined' ? self : this);
 
+</script>
+<script>
+/* Módulo ICMS por estado — Controller & Oraculu's. Alíquotas internas gerais (modais) conferidas em 06/11/2026.
+ * Regras: CF, art. 155, parágrafo 2º, IV a VIII (EC 87/2015); LC 87/1996, arts. 12, 13 e 20; LC 190/2022 (DIFAL para não contribuinte);
+ * Res. do Senado 22/1989 (12% e 7%) e 13/2012 (4% para importados); Convênio ICMS 236/2021 (DIFAL, base dupla);
+ * Convênio ICMS 142/2018, cláusula 9ª (MVA ajustada na ST interestadual); EC 132/2023, ADCT, art. 128 (redução do ICMS em 2029–2032 e extinção em 2033).
+ * Alíquota modal = regra geral; produtos com alíquota própria (cesta básica, energia, combustíveis, supérfluos) devem ser informados na tela.
+ * Sem DOM: roda no navegador e no Node. */
+(function (raiz) {
+  'use strict';
+
+  // interna: alíquota geral; fcp: adicional de fundo de pobreza aplicado em regra geral; ssExES: Sul/Sudeste, exceto ES (origem de 7% para N/NE/CO/ES)
+  const UF = {
+    AC: {nome: 'Acre', interna: .19, fcp: 0},
+    AL: {nome: 'Alagoas', interna: .205, fcp: 0, obs: '20,5% desde 01/04/2026 (lei estadual de dez/2025; antes 19%). Fundo de pobreza em produtos específicos.'},
+    AM: {nome: 'Amazonas', interna: .20, fcp: 0},
+    AP: {nome: 'Amapá', interna: .18, fcp: 0},
+    BA: {nome: 'Bahia', interna: .205, fcp: 0, obs: 'Fundo de pobreza de 2% em produtos específicos.'},
+    CE: {nome: 'Ceará', interna: .20, fcp: 0},
+    DF: {nome: 'Distrito Federal', interna: .20, fcp: 0},
+    ES: {nome: 'Espírito Santo', interna: .17, fcp: 0},
+    GO: {nome: 'Goiás', interna: .19, fcp: 0, obs: 'Lei 11.651/1991, art. 27, I, com a Lei 22.460/2023.'},
+    MA: {nome: 'Maranhão', interna: .23, fcp: 0, obs: 'Maior alíquota geral do país.'},
+    MG: {nome: 'Minas Gerais', interna: .18, fcp: 0, ss: true, obs: 'Fundo de pobreza de 2% em produtos específicos.'},
+    MS: {nome: 'Mato Grosso do Sul', interna: .17, fcp: 0},
+    MT: {nome: 'Mato Grosso', interna: .17, fcp: 0},
+    PA: {nome: 'Pará', interna: .19, fcp: 0},
+    PB: {nome: 'Paraíba', interna: .20, fcp: 0},
+    PE: {nome: 'Pernambuco', interna: .205, fcp: 0},
+    PI: {nome: 'Piauí', interna: .225, fcp: 0},
+    PR: {nome: 'Paraná', interna: .195, fcp: 0, ss: true},
+    RJ: {nome: 'Rio de Janeiro', interna: .20, fcp: .02, ss: true, obs: '20% + 2% do FECP (Lei 2.657/1996; LC 210/2023): carga de 22%.'},
+    RN: {nome: 'Rio Grande do Norte', interna: .20, fcp: 0},
+    RO: {nome: 'Rondônia', interna: .195, fcp: 0},
+    RR: {nome: 'Roraima', interna: .20, fcp: 0},
+    RS: {nome: 'Rio Grande do Sul', interna: .17, fcp: 0, ss: true},
+    SC: {nome: 'Santa Catarina', interna: .17, fcp: 0, ss: true},
+    SE: {nome: 'Sergipe', interna: .19, fcp: 0, obs: 'Adicional do FECOEP em produtos específicos.'},
+    SP: {nome: 'São Paulo', interna: .18, fcp: 0, ss: true, obs: 'RICMS-SP, art. 52, I (18%); alíquotas de 7%, 12% e 25% para mercadorias específicas (arts. 53 a 55).'},
+    TO: {nome: 'Tocantins', interna: .20, fcp: 0}
+  };
+
+  // Alíquota interestadual (Res. Senado 22/1989 e 13/2012)
+  function interestadual(origem, destino, importado) {
+    if (origem === destino) return null;
+    if (importado) return .04;
+    const o = UF[origem], d = UF[destino];
+    return o && o.ss && !(d && d.ss) ? .07 : .12;
+  }
+
+  // Fator da reforma: ICMS a 90%, 80%, 70% e 60% em 2029–2032; extinto em 2033 (EC 132/2023, ADCT, art. 128)
+  function fatorReforma(ano) { return ano <= 2028 ? 1 : ano >= 2033 ? 0 : 1 - .1 * (ano - 2028); }
+
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const pc = v => (v * 100).toFixed(2).replace('.', ',') + '%';
+
+  /* e: {origem, destino, destinatario: 'revenda'|'consumo'|'naocontrib', importado,
+   *     produtos, frete, despesas (seguro e outras), desconto, ipi,
+   *     valorComICMS (bool: valores já incluem o ICMS, padrão true; se false, faz o gross-up),
+   *     reducaoBC (fração), aliqInterna (override destino/operação interna), fcp (override), aliqOrigemInterna (override p/ interna),
+   *     baseDifal: 'dupla'|'unica', st: {ativo, mva, aliqInterna, fcp}} */
+  function calcular(e) {
+    const interna = e.origem === e.destino;
+    const uo = UF[e.origem] || {}, ud = UF[e.destino] || {};
+    const aliqDest = e.aliqInterna != null && e.aliqInterna !== '' ? +e.aliqInterna : (ud.interna || 0);
+    const fcpDest = e.fcp != null && e.fcp !== '' ? +e.fcp : (ud.fcp || 0);
+    const ai = interna ? aliqDest : interestadual(e.origem, e.destino, e.importado);
+    const fcpOp = interna ? fcpDest : 0;
+    const red = Math.min(1, Math.max(0, +e.reducaoBC || 0));
+    const consumidorFinal = e.destinatario !== 'revenda';
+    // IPI integra a base quando o destino é consumo/uso ou não contribuinte (LC 87/1996, art. 13, parágrafo 2º)
+    const ipiNaBase = consumidorFinal;
+    const n = k => Math.max(0, +e[k] || 0);
+    let soma = n('produtos') + n('frete') + n('despesas') - n('desconto') + (ipiNaBase ? n('ipi') : 0);
+    const memoria = [], avisos = [];
+    const comICMS = e.valorComICMS !== false;
+    let valorOp = soma;
+    if (!comICMS) { valorOp = soma / (1 - (ai + fcpOp) * (1 - red)); memoria.push('Valores informados sem ICMS: o imposto é calculado por dentro, então a base é ' + brl(soma) + ' ÷ (1 − ' + pc((ai + fcpOp) * (1 - red)) + ') = ' + brl(valorOp) + ' (LC 87/1996, art. 13, parágrafo 1º, I).'); }
+    const base = valorOp * (1 - red);
+    const icms = base * ai, fcp = base * fcpOp;
+    memoria.push('Base de cálculo: produtos + frete + despesas − desconto' + (ipiNaBase ? ' + IPI (destinatário consumidor final)' : '') + (red ? ', com redução de ' + pc(red) : '') + ' = ' + brl(base) + '.');
+    memoria.push((interna ? 'Operação interna em ' + (uo.nome || e.origem) : 'Operação interestadual ' + e.origem + ' → ' + e.destino + (e.importado ? ' com importado (conteúdo de importação acima de 40%)' : '')) + ': alíquota ' + pc(ai) + (fcpOp ? ' + FCP ' + pc(fcpOp) : '') + ' → ICMS ' + brl(icms) + (fcpOp ? ' + FCP ' + brl(fcp) : '') + '.');
+    const out = {interna, aliqOperacao: ai, aliqDestino: aliqDest, fcpDestino: fcpDest, base, valorOp, icms, fcp, difal: 0, fcpDifal: 0, st: 0, fcpSt: 0, memoria, avisos};
+
+    // DIFAL — EC 87/2015, LC 190/2022
+    if (!interna && consumidorFinal) {
+      const dupla = e.destinatario === 'naocontrib' || e.baseDifal !== 'unica';
+      let difal, baseDest;
+      if (aliqDest + fcpDest <= ai) { difal = 0; baseDest = base; }
+      else if (dupla) {
+        baseDest = (base - icms) / (1 - aliqDest - fcpDest);
+        difal = baseDest * aliqDest - icms;
+        memoria.push('DIFAL com base dupla (Convênio ICMS 236/2021; LC 87/1996, art. 13, parágrafo 1º, I, com a LC 190/2022): (' + brl(base) + ' − ' + brl(icms) + ') ÷ (1 − ' + pc(aliqDest + fcpDest) + ') = ' + brl(baseDest) + '; DIFAL = ' + brl(baseDest) + ' × ' + pc(aliqDest) + ' − ' + brl(icms) + ' = ' + brl(difal) + '.');
+      } else {
+        baseDest = base; difal = base * (aliqDest - ai);
+        memoria.push('DIFAL com base única: ' + brl(base) + ' × (' + pc(aliqDest) + ' − ' + pc(ai) + ') = ' + brl(difal) + '.');
+      }
+      out.difal = Math.max(0, difal); out.fcpDifal = baseDest * fcpDest; out.baseDifal = baseDest;
+      if (fcpDest) memoria.push('FCP do destino sobre a base do DIFAL: ' + brl(baseDest) + ' × ' + pc(fcpDest) + ' = ' + brl(out.fcpDifal) + '.');
+      memoria.push(e.destinatario === 'naocontrib' ? 'Não contribuinte: o remetente recolhe o DIFAL ao estado de destino (GNRE ou inscrição no destino), conforme a LC 190/2022.' : 'Contribuinte (uso, consumo ou ativo imobilizado): o destinatário recolhe o DIFAL no seu estado. Confira se a lei do destino usa base única ou dupla.');
+      if (e.destinatario !== 'naocontrib') avisos.push('Base do DIFAL para contribuinte: varia por estado. A tela usa ' + (dupla ? 'base dupla' : 'base única') + '; ajuste conforme a legislação do destino. Optante do Simples recolhe o DIFAL de entrada só se a lei do estado prever (LC 123/2006, art. 13, parágrafo 1º, XIII, "h").');
+    }
+
+    // ICMS-ST — LC 87/1996, arts. 6º a 10; Convênio ICMS 142/2018
+    if (e.st && e.st.ativo) {
+      const mva = Math.max(0, +e.st.mva || 0);
+      const aIntST = e.st.aliqInterna != null && e.st.aliqInterna !== '' ? +e.st.aliqInterna : aliqDest;
+      const fcpST = e.st.fcp != null && e.st.fcp !== '' ? +e.st.fcp : fcpDest;
+      let mvaAj = mva;
+      if (!interna && aIntST > ai) mvaAj = (1 + mva) * (1 - ai) / (1 - aIntST) - 1;
+      const baseST = (valorOp + (ipiNaBase ? 0 : n('ipi'))) * (1 + mvaAj) * (1 - red); // valor da operação com ICMS próprio, IPI, frete e despesas
+      out.st = Math.max(0, baseST * aIntST - icms); out.fcpSt = Math.max(0, baseST * fcpST - fcp); out.baseST = baseST; out.mvaAjustada = mvaAj;
+      memoria.push('ICMS-ST: MVA ' + pc(mva) + (mvaAj !== mva ? ', ajustada para ' + pc(mvaAj) + ' = (1 + MVA) × (1 − ' + pc(ai) + ') ÷ (1 − ' + pc(aIntST) + ') − 1 (Convênio ICMS 142/2018, cláusula 9ª)' : '') + '. Base ST (com IPI) = ' + brl(baseST) + '; ST = ' + brl(baseST) + ' × ' + pc(aIntST) + ' − ICMS próprio ' + brl(icms) + ' = ' + brl(out.st) + '.');
+      if (fcpST) memoria.push('FCP-ST: ' + brl(baseST) + ' × ' + pc(fcpST) + ' − FCP próprio = ' + brl(out.fcpSt) + '.');
+      if (consumidorFinal && !interna) avisos.push('Com ST para consumidor final, confira se o protocolo/convênio do produto prevê ST nessa operação; em regra o DIFAL substitui a ST quando a mercadoria vai para uso e consumo.');
+      avisos.push('A MVA e a sujeição à ST dependem do produto (NCM/CEST) e do convênio ou protocolo entre os estados. Confira no RICMS do destino.');
+    }
+    out.total = icms + fcp + out.difal + out.fcpDifal + out.st + out.fcpSt;
+    out.cargaPct = out.valorOp ? out.total / out.valorOp : 0;
+    if (ud.obs && !interna) avisos.push(ud.nome + ': ' + ud.obs);
+    if (uo.obs && interna) avisos.push(uo.nome + ': ' + uo.obs);
+    out.projecao = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033].map(a => ({ano: a, fator: fatorReforma(a), total: out.total * fatorReforma(a)}));
+    return out;
+  }
+
+  const api = {UF, interestadual, fatorReforma, calcular};
+  if (typeof module === 'object' && module.exports) module.exports = api; else raiz.ICMS = api;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const C = window.ICMS;
+  const $ = id => document.getElementById(id);
+  const brl = v => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL', maximumFractionDigits: 2});
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const pc = v => (v * 100).toFixed(2).replace('.', ',') + '%';
+  const ufs = Object.keys(C.UF).sort();
+  ['m-ori', 'm-des'].forEach(id => ufs.forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k + ' — ' + C.UF[k].nome; $(id).appendChild(o); }));
+  $('m-ori').value = 'SP'; $('m-des').value = 'SP';
+  function preencher() { const u = C.UF[$('m-des').value]; $('m-aint').value = +(u.interna * 100).toFixed(2); $('m-fcp').value = +(u.fcp * 100).toFixed(2); }
+  preencher();
+  $('m-des').addEventListener('change', preencher);
+  const card = (nome, valor, sub, destaque) => '<div class="cartao' + (destaque ? ' melhor' : '') + '"><div class="nome">' + nome + '</div><div class="valor">' + valor + '</div><div class="sub">' + sub + '</div></div>';
+  function render() {
+    const n = id => parseFloat($(id).value) || 0, dest = $('m-dest').value;
+    $('form-icms').querySelector('[data-m="consumo"]').hidden = !(dest === 'consumo' && $('m-ori').value !== $('m-des').value);
+    $('form-icms').querySelector('[data-m="st"]').hidden = !$('m-st').checked;
+    const e = {origem: $('m-ori').value, destino: $('m-des').value, destinatario: dest, importado: $('m-imp').checked, valorComICMS: $('m-com').checked,
+      produtos: n('m-prod'), ipi: n('m-ipi'), frete: n('m-frete'), despesas: n('m-desp'), desconto: n('m-desc'), reducaoBC: n('m-red') / 100,
+      aliqInterna: n('m-aint') / 100, fcp: n('m-fcp') / 100, baseDifal: $('m-bd').value,
+      st: {ativo: $('m-st').checked, mva: n('m-mva') / 100, aliqInterna: $('m-aist').value === '' ? '' : n('m-aist') / 100}};
+    const r = C.calcular(e);
+    $('m-cartoes').innerHTML = card('ICMS da operação', brl(r.icms + r.fcp), (r.interna ? 'interna ' : 'interestadual ') + pc(r.aliqOperacao) + (r.fcp ? ' + FCP' : ''), true) +
+      card('DIFAL ' + (dest === 'naocontrib' ? '(pago pelo remetente)' : '(pago pelo destinatário)'), brl(r.difal + r.fcpDifal), r.interna || dest === 'revenda' ? 'não se aplica' : 'para ' + e.destino + (r.fcpDifal ? ', com FCP ' + brl(r.fcpDifal) : '')) +
+      card('ICMS-ST', brl(r.st + r.fcpSt), e.st.ativo ? 'MVA ' + pc(r.mvaAjustada) + (r.mvaAjustada !== e.st.mva ? ' (ajustada)' : '') : 'não marcada');
+    $('m-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
+    const linhas = [['Valor da operação (base antes da redução)', r.valorOp], ['Base de cálculo do ICMS', r.base], ['ICMS próprio (' + pc(r.aliqOperacao) + ')', r.icms]];
+    if (r.fcp) linhas.push(['FCP', r.fcp]);
+    if (r.difal || r.fcpDifal) linhas.push(['Base do DIFAL', r.baseDifal], ['DIFAL', r.difal], ['FCP do DIFAL', r.fcpDifal]);
+    if (e.st.ativo) linhas.push(['Base da ST', r.baseST], ['ICMS-ST', r.st], ['FCP-ST', r.fcpSt]);
+    linhas.push(['Total de ICMS na operação', r.total]);
+    $('m-res').innerHTML = '<tbody>' + linhas.map((l, i) => '<tr' + (i === linhas.length - 1 ? ' class="total"' : '') + '><td>' + l[0] + '</td><td>' + brl(l[1]) + '</td></tr>').join('') +
+      '<tr><td>Carga sobre o valor da operação</td><td>' + pc(r.cargaPct) + '</td></tr></tbody>';
+    $('m-proj').innerHTML = '<thead><tr><th>Ano</th>' + r.projecao.map(p => '<th>' + p.ano + '</th>').join('') + '</tr></thead><tbody><tr><td>ICMS (% da alíquota)</td>' + r.projecao.map(p => '<td>' + Math.round(p.fator * 100) + '%</td>').join('') + '</tr><tr><td>ICMS total da operação</td>' + r.projecao.map(p => '<td>' + brl(p.total) + '</td>').join('') + '</tr></tbody>';
+    $('m-memoria').innerHTML = r.memoria.map(m => '<li>' + esc(m) + '</li>').join('');
+    $('m-orinome').textContent = C.UF[e.origem].nome;
+    $('m-tab').innerHTML = '<thead><tr><th>UF</th><th>Estado</th><th>Alíquota geral</th><th>FCP geral</th><th>Interestadual de ' + e.origem + '</th><th>Observação</th></tr></thead><tbody>' +
+      ufs.map(k => { const u = C.UF[k], it = C.interestadual(e.origem, k, e.importado); return '<tr' + (k === e.destino ? ' class="total"' : '') + '><td>' + k + '</td><td>' + esc(u.nome) + '</td><td>' + pc(u.interna) + '</td><td>' + (u.fcp ? pc(u.fcp) : '—') + '</td><td>' + (it === null ? 'interna' : pc(it)) + '</td><td>' + esc(u.obs || '') + '</td></tr>'; }).join('') + '</tbody>';
+  }
+  $('form-icms').addEventListener('input', render);
+  $('form-icms').addEventListener('change', render);
+  $('form-icms').addEventListener('submit', ev => ev.preventDefault());
+  render();
+})();
 </script>
 <script>
 /* Módulo Ganho de Capital da Pessoa Física na venda de imóveis — Controller & Oraculu's. Regras conferidas em 06/11/2026.

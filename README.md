@@ -19,6 +19,10 @@ Também mostra a retenção de 10% sobre dividendos da Lei 15.270/2025 e o créd
 
 - `gcap.js`: ganho de capital da pessoa física na venda de imóvel, no formato do GCAP: custo de aquisição (compra, herança ou doação) e benfeitorias com data, cada parcela com a redução da Lei 7.713/1988 e os fatores FR1/FR2 da Lei 11.196/2005 pela sua data; corretagem; condomínio com a parte de cada proprietário e o limite de R$ 440 mil por parte (IN SRF 84/2001, art. 29, parágrafo 1º, II, "a"); reinvestimento em 180 dias proporcional; venda a prazo com DARF 4600 por recebimento e vencimento no último dia útil do mês seguinte (feriados nacionais e 31/12); multa e juros por atraso com a Selic informada.
 
+## Aba ICMS
+
+- `icms.js`: alíquota geral (modal) e FCP dos 27 estados em 2026 (Alagoas 20,5% desde 01/04/2026), alíquota interestadual automática (12%, 7% de Sul/Sudeste exceto ES para N/NE/CO/ES, 4% importados), ICMS por dentro com gross-up, IPI na base para consumidor final, redução de base, DIFAL (base dupla ou única; não contribuinte pela LC 190/2022 e Convênio 236/2021) com FCP, ICMS-ST com MVA ajustada (Convênio 142/2018) e projeção da extinção do ICMS (2029–2033). Alíquotas editáveis para produtos com alíquota própria.
+
 ## Aba ITBI
 
 - Compra e venda: base no valor declarado (STJ, Tema 1.113; CTN, art. 38 com a LC 227/2026), alíquota reduzida do SFH quando o município prevê, e o cenário de risco se a prefeitura exigir o valor de referência.
@@ -43,6 +47,7 @@ template.html       tela, estilos e interação
 motor.js            motor de cálculo e parâmetros legais (sem DOM)
 cnae.js             enquadramento por CNAE e consulta de CNPJ
 construcao.js       módulo de construção e incorporação (RET, CPRB, redutores)
+icms.js             ICMS por estado (interna, interestadual, DIFAL, ST)
 gcap.js             ganho de capital PF (venda de imóvel)
 itbi.js             módulo de ITBI (compra, integralização, reorganização, preponderância e custas de cartório)
 build.py            embute motor.js, cnae.js, construcao.js e itbi.js em template.html e gera index.html
