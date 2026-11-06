@@ -993,7 +993,7 @@
     const e = ler(), r = V.calcular(e), C = r.cenarios, ks = ['pf', 'presumido', 'real'];
     const tot = k => e.distribuir ? C[k].totalComIrrf : C[k].total;
     const melhor = ks.slice().sort((a, b) => tot(a) - tot(b))[0];
-    $('v-cartoes').innerHTML = ks.map(k => { const c = C[k], top = k === melhor; return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') + '<div class="nome">' + esc(c.nome) + '</div><div class="valor">' + brl(tot(k)) + '</div><div class="sub">' + pct(r.receita ? tot(k) / r.receita : 0) + ' do valor de venda' + (e.distribuir && c.irrf ? ' · inclui IRRF ' + brl(c.irrf) : '') + '</div>' + (top ? '' : '<div class="sub">+' + brl(tot(k) - tot(melhor)) + '</div>') + '</div>'; }).join('');
+    $('v-cartoes').innerHTML = ks.map(k => { const c = C[k], top = k === melhor; return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') + '<div class="nome">' + esc(c.nome) + '</div><div class="valor">' + brl(tot(k)) + '</div><div class="sub">' + pct(r.valorTotal ? tot(k) / r.valorTotal : 0) + ' do valor dos imóveis' + (e.distribuir && c.irrf ? ' · inclui IRRF ' + brl(c.irrf) : '') + '</div>' + (top ? '' : '<div class="sub">+' + brl(tot(k) - tot(melhor)) + '</div>') + '</div>'; }).join('');
     $('v-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
     $('v-titulo').textContent = 'Tributos por cenário — venda em ' + e.venda.split('-').reverse().join('/');
     const nomes = []; ks.forEach(k => C[k].itens.forEach(i => { if (!nomes.includes(i.nome)) nomes.push(i.nome); }));

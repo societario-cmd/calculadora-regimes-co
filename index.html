@@ -1557,7 +1557,7 @@
       : 'Permuta: PJ e PF tributam só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; para o Presumido, STJ e SC COSIT 99/2024). CBS/IBS só sobre a torna (LC 214, art. 252). O imóvel recebido fica com o custo do imóvel dado; cada transmissão paga ITBI. "Fica com o vendedor" mostra só o dinheiro.');
     if (corrT) out.avisos.push('Corretagem: reduz o ganho da PF e é despesa no Lucro Real; no Presumido não é dedutível. A partir de 2027, a CBS/IBS cobrada na corretagem dá crédito à PJ contribuinte (não considerado aqui).');
     if (e.distribuir) out.avisos.push('O IRRF de 10% sobre lucros é antecipação do imposto mínimo anual (IRPFM) do sócio; distribuições até R$ 50 mil por mês por sócio não têm retenção. Na PF a comparação considera só o IR de ganho de capital.');
-    out.receita = Rt; out.custo = custoT;
+    out.receita = Rt; out.custo = custoT; out.valorTotal = ims.reduce((a, i) => a + (+i.valor || 0), 0);
     return out;
   }
 
@@ -2050,7 +2050,7 @@
     const e = ler(), r = V.calcular(e), C = r.cenarios, ks = ['pf', 'presumido', 'real'];
     const tot = k => e.distribuir ? C[k].totalComIrrf : C[k].total;
     const melhor = ks.slice().sort((a, b) => tot(a) - tot(b))[0];
-    $('v-cartoes').innerHTML = ks.map(k => { const c = C[k], top = k === melhor; return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') + '<div class="nome">' + esc(c.nome) + '</div><div class="valor">' + brl(tot(k)) + '</div><div class="sub">' + pct(r.receita ? tot(k) / r.receita : 0) + ' do valor de venda' + (e.distribuir && c.irrf ? ' · inclui IRRF ' + brl(c.irrf) : '') + '</div>' + (top ? '' : '<div class="sub">+' + brl(tot(k) - tot(melhor)) + '</div>') + '</div>'; }).join('');
+    $('v-cartoes').innerHTML = ks.map(k => { const c = C[k], top = k === melhor; return '<div class="cartao' + (top ? ' melhor' : '') + '">' + (top ? '<span class="selo">Menor carga</span>' : '') + '<div class="nome">' + esc(c.nome) + '</div><div class="valor">' + brl(tot(k)) + '</div><div class="sub">' + pct(r.valorTotal ? tot(k) / r.valorTotal : 0) + ' do valor dos imóveis' + (e.distribuir && c.irrf ? ' · inclui IRRF ' + brl(c.irrf) : '') + '</div>' + (top ? '' : '<div class="sub">+' + brl(tot(k) - tot(melhor)) + '</div>') + '</div>'; }).join('');
     $('v-avisos').innerHTML = r.avisos.map(a => '<div class="aviso">' + esc(a) + '</div>').join('');
     $('v-titulo').textContent = 'Tributos por cenário — venda em ' + e.venda.split('-').reverse().join('/');
     const nomes = []; ks.forEach(k => C[k].itens.forEach(i => { if (!nomes.includes(i.nome)) nomes.push(i.nome); }));

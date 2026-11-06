@@ -227,7 +227,7 @@
       : 'Permuta: PJ e PF tributam só a torna, com custo proporcional (IN SRF 84/2001, arts. 23 e 29, IV; IN SRF 107/1988; para o Presumido, STJ e SC COSIT 99/2024). CBS/IBS só sobre a torna (LC 214, art. 252). O imóvel recebido fica com o custo do imóvel dado; cada transmissão paga ITBI. "Fica com o vendedor" mostra só o dinheiro.');
     if (corrT) out.avisos.push('Corretagem: reduz o ganho da PF e é despesa no Lucro Real; no Presumido não é dedutível. A partir de 2027, a CBS/IBS cobrada na corretagem dá crédito à PJ contribuinte (não considerado aqui).');
     if (e.distribuir) out.avisos.push('O IRRF de 10% sobre lucros é antecipação do imposto mínimo anual (IRPFM) do sócio; distribuições até R$ 50 mil por mês por sócio não têm retenção. Na PF a comparação considera só o IR de ganho de capital.');
-    out.receita = Rt; out.custo = custoT;
+    out.receita = Rt; out.custo = custoT; out.valorTotal = ims.reduce((a, i) => a + (+i.valor || 0), 0);
     return out;
   }
 
